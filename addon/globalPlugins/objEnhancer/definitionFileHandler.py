@@ -8,7 +8,19 @@
 import globalVars
 import os
 from logHandler import log
-import configobj
+from configobj import ConfigObj
+from io import BytesIO
+from validate import Validator
+
+defFileSpec=ConfigObj(BytesIO("""[__many__]
+	[[input]]
+	[[options]]
+		absoluteLocations = bool(default=False)
+	[[output]]"""),
+	indent_type="\t",
+	encoding="UTF-8",
+)
+defFileSpec.newlines = "\r\n"
 
 def getDefinitionFileDir():
 	configPath = globalVars.appArgs.configPath
@@ -39,14 +51,21 @@ def getDefinitionOBjFromDefinitionFile(definitionFile,create=True):
 	# configObj objects are created even when the file doesn't exist
 	if not os.path.isabs(definitionFile):
 		raise ValueError("Absolute path required")
-	if not create and not os.path.isfile(definitionFile):
-		raise IOError("{path} does not exist".format(path=definitionFile))
 	try:
-		obj=configobj.ConfigObj(
+		obj=ConfigObj(
 			infile=definitionFile,
-			raise_errors=True
+			raise_errors=True,
+			create_empty=create,
+			file_error=not create,
+			indent_type="\t",
+			encoding="UTF-8",
+			unrepr=True,
+			configspec=defFileSpec
 		)
-	except error as e:
+		obj.newlines = "\r\n"
+		val = Validator()
+		obj.validate(val, copy=True)
+	except Exception as e:
 		raise e
 	return obj
 

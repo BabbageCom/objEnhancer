@@ -11,6 +11,7 @@ import definitionFileHandler
 from configobj import ConfigObj
 import os
 from logHandler import log
+from validate import Validator
 #We need to initialize translation and localization support:
 addonHandler.initTranslation()
 
@@ -45,6 +46,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			log.debug("Obj Enhancer definition file for {app} unloaded and deleted".format(app=appName))
 		else:
 			# write the current state of the definition object to its corresponding file
+			defObj.validate(Validator(), copy=True)
 			defObj.write()
 			log.debug("Obj Enhancer definition file for {app} unloaded and saved".format(app=appName))
 

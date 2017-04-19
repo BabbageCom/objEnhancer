@@ -11,22 +11,42 @@ from NVDAObjects import NVDAObject
 from operator import attrgetter
 
 def manipulateObject(obj,spec):
-	if not isinstance(spec,configobj.Section):
+	options=spec.get('options')
+	output=spec.get('output')
+	if not (isinstance(spec,configobj.Section) and options and output):
 		raise ValueError("Invalid specification")
+	for attr,val in output.iteritems():
+		if not options.get('ignoreNonexistentAttributes',True):
+			try:
+				getattr(obj,atr)
+			except Exception as e:
+				if options.get('raiseOutputErrors',True):
+					raise e
+				else:
+					continue
+		try:
+			setattr(obj,attr,val)
+		except Exception as e:
+			if options.get('raiseOutputErrors',True):
+				raise e
+			else:
+				continue
 
-def evaluateObjAttrs(obj,spec,optionals=None):
+def evaluateObjAttrs(obj,spec):
 	if not isinstance(obj,NVDAObject):
-		raise ValueError("Invalid AutoPropertyObject specified")
-	if not isinstance(spec,dict):
-		raise ValueError("Specification should be a dictionary")
+		raise ValueError("Invalid NVDAObject specified")
+	input=spec.get('input')
+	options=spec.get('options')
+	if not (isinstance(spec,configobj.Section) and input and options):
+		raise ValueError("Invalid spesification provided")
 	# We intentionally do not use iterators here
-	attrs=spec.keys()
+	attrs=input.keys()
 	getter=attrgetter(*attrs)
 	try:
 		actualValues=list(getter(obj)) if len(attrs)>1 else [getter(obj)]
 	except:
 		return False
-	expectedValues=spec.values()
+	expectedValues=input.values()
 	if len(actualValues)!=len(expectedValues):
 		raise RuntimeError("Lengths don't match")
 	for i in xrange(len(attrs)):
@@ -34,7 +54,3 @@ def evaluateObjAttrs(obj,spec,optionals=None):
 			return False
 	return True
 
-def setattrObj(obj,attribute, value):
-	"""setattr wrapper to deal with AutoPropertyObjects"""
-	if not isinstance(obj,AutoPropertyObject):
-		raise ValueError("Invalid AutoPropertyObject specified")

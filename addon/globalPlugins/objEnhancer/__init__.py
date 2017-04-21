@@ -8,10 +8,14 @@
 import addonHandler
 import globalPluginHandler
 import definitionFileHandler
-from configobj import ConfigObj
+from configobj import ConfigObj,Section
 import os
 from logHandler import log
 from validate import Validator
+import definitionEvaluator
+from copy import deepcopy
+import appModuleHandler
+from tones import beep
 #We need to initialize translation and localization support:
 addonHandler.initTranslation()
 
@@ -65,3 +69,33 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def terminate(self):
 		self.unloadDefinitions()
 		super(GlobalPlugin,self).terminate()
+
+	def getDefinitionsForAppModule(self,appModule):
+		if not isinstance(appModule,appModuleHandler.AppModule):
+			raise ValueError("Invalid appModule specified")
+		name=appModule.appModuleName
+		if name=="appModuleHandler":
+			name=appModule.appName.encode('mbcs')
+		# This will return None if no definitions available. Note that an empty dictionary will evaluate to False as well
+		return self.definitions.get(name)
+
+	#def chooseNVDAObjectOverlayClasses(self, obj, clsList):
+	def event_gainFocus(self,obj,nextHandler):
+		try:
+			appDefs=self.getDefinitionsForAppModule(obj.appModule)
+			globalDefs=self.definitions['global']
+			if appDefs:
+				relevantDefs=deepcopy(appDefs)
+				relevantDefs.merge(globalDefs)
+			else:
+				relevantDefs=globalDefs
+			if not relevantDefs:
+				return
+			matches={matchCount:definition for (matchCount,definition) in definitionEvaluator.findMatchingDefinitionsForObj(obj,relevantDefs)}
+			if not matches:
+				return
+			objDefinition=matches[max(m for m in matches)]
+			definitionEvaluator.manipulateObject(obj,objDefinition)
+		finally:
+			nextHandler()
+

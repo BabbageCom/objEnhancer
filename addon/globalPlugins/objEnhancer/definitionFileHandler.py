@@ -14,11 +14,13 @@ from validate import Validator
 
 defFileSpec=ConfigObj(BytesIO("""[__many__]
 	[[input]]
-	[[options]]
-		raiseOutputErrors = bool(default=True)
-		ignoreNonexistentAttributes = bool(default=True)
-		absoluteLocations = bool(default=False)
-	[[output]]"""),
+		[[options]]
+			raiseOutputErrors = bool(default=True)
+			ignoreNonexistentAttributes = bool(default=True)
+			absoluteLocations = bool(default=False)
+			ignoreGainFocusEvent = bool(default=False)
+			ignoreBecomeNavigatorObjectEvent = bool(default=False)
+		[[output]]"""),
 	indent_type="\t",
 	encoding="UTF-8",
 )

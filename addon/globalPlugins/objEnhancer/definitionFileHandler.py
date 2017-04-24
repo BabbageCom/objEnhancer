@@ -11,18 +11,22 @@ from logHandler import log
 from configobj import ConfigObj
 from io import BytesIO
 from validate import Validator
+import controlTypes
 
 defFileSpec=ConfigObj(BytesIO("""[__many__]
 	[[input]]
 		[[options]]
-			raiseOutputErrors = bool(default=True)
-			ignoreNonexistentAttributes = bool(default=True)
-			absoluteLocations = bool(default=False)
-			ignoreGainFocusEvent = bool(default=False)
-			ignoreBecomeNavigatorObjectEvent = bool(default=False)
+			raiseOutputErrors = boolean(default=True)
+			ignoreNonexistentAttributes = boolean(default=True)
+			absoluteLocations = boolean(default=False)
+			ignoreGainFocusEvent = boolean(default=False)
+			ignoreBecomeNavigatorObjectEvent = boolean(default=False)
 		[[output]]"""),
 	indent_type="\t",
 	encoding="UTF-8",
+	interpolation=False,
+	list_values=False,
+	_inspec=True
 )
 defFileSpec.newlines = "\r\n"
 
@@ -63,12 +67,13 @@ def getDefinitionOBjFromDefinitionFile(definitionFile,create=True):
 			file_error=not create,
 			indent_type="\t",
 			encoding="UTF-8",
+			interpolation=False,
 			unrepr=True,
 			configspec=defFileSpec
 		)
 		obj.newlines = "\r\n"
 		val = Validator()
-		obj.validate(val, copy=True)
+		obj.validate(val)
 	except Exception as e:
 		raise e
 	return obj

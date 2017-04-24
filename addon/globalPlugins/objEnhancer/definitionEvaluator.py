@@ -10,20 +10,21 @@ from baseObject import AutoPropertyObject
 from NVDAObjects import NVDAObject
 from operator import attrgetter
 from logHandler import log
+from operator import sub
+import itertools
 
-def evaluateObjAttrs(obj,spec, event):
+def evaluateObjAttrs(obj,spec):
 	if not isinstance(obj,NVDAObject):
 		raise ValueError("Invalid NVDAObject specified: %s"%obj)
 	matches=0
 	input=spec.get('input',{})
-	if not (isinstance(spec,configobj.Section) and input):
+	if not (isinstance(spec,dict) and input):
 		raise ValueError("Invalid spesification provided: %s"%spec)
 	options=spec.get('options',{})
-	if options.get('ignore%sEvent'%event[0].upper()+event[1:],False):
-		return
 	# We intentionally do not use iterators here
 	attrs=input.keys()
 	getter=attrgetter(*attrs)
+	relativeLocations={}
 	try:
 		actualValues=list(getter(obj)) if len(attrs)>1 else [getter(obj)]
 	except:
@@ -32,14 +33,26 @@ def evaluateObjAttrs(obj,spec, event):
 	if len(actualValues)!=len(expectedValues):
 		raise RuntimeError("Lengths don't match")
 	for i in xrange(len(attrs)):
-		if actualValues[i]!=expectedValues[i]:
+		attr=attrs[i]
+		exVal=expectedValues[i]
+		actVal=actualValues[i]
+		if not options.get('absoluteLocations',False) and 'location' in attr:
+			relativeLocations[attr]=tuple(map(sub,exVal,actVal))
+		elif actVal==exVal:
+			matches+=1
+		else:
+			return 0
+	if len(relativeLocations)==1 and relativeLocations.values()[0]==(0,0,0,0):
+		matches=+1
+	for x,y in itertools.combinations(relativeLocations.itervalues(),2):
+		if x[:2]!=y[:2]:
 			return 0
 		matches+=1
 	return matches
 
 def manipulateObject(obj,spec):
 	output=spec.get('output',{})
-	if not (isinstance(spec,configobj.Section) and output):
+	if not (isinstance(spec,dict) and output):
 		raise ValueError("Invalid specification provided: %s"%spec)
 	options=spec.get('options',{})
 	for attr,val in output.iteritems():

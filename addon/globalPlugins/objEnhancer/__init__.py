@@ -8,7 +8,7 @@
 import addonHandler
 import globalPluginHandler
 import definitionFileHandler
-from configobj import ConfigObj,Section
+from configobj import ConfigObj
 import os
 from logHandler import log
 from validate import Validator
@@ -48,11 +48,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		if delete:
 			os.remove(defFile)
 			log.debug("Obj Enhancer definition file for {app} unloaded and deleted".format(app=appName))
-		else:
-			# write the current state of the definition object to its corresponding file
-			defObj.validate(Validator(), copy=True)
-			defObj.write()
-			log.debug("Obj Enhancer definition file for {app} unloaded and saved".format(app=appName))
 
 	def loadDefinitions(self):
 		for a,f in definitionFileHandler.availableDefinitionFiles():
@@ -79,8 +74,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		# This will return None if no definitions available. Note that an empty dictionary will evaluate to False as well
 		return self.definitions.get(name)
 
-	#def chooseNVDAObjectOverlayClasses(self, obj, clsList):
-	def event_gainFocus(self,obj,nextHandler):
+	def event_focusEntered(self,obj,nextHandler):
 		try:
 			appDefs=self.getDefinitionsForAppModule(obj.appModule)
 			globalDefs=self.definitions['global']
@@ -99,3 +93,5 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		finally:
 			nextHandler()
 
+	event_becomeNavigatorObject=event_gainFocus=event_focusEntered
+	

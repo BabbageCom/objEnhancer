@@ -24,7 +24,7 @@ def md2html(source, dest):
 		mdText = f.read()
 		for k, v in headerDic.iteritems():
 			mdText = mdText.replace(k, v, 1)
-		htmlText = markdown.markdown(mdText)
+		htmlText = markdown.markdown(mdText, ['markdown.extensions.extra','markdown.extensions.toc','markdown.extensions.smarty'])
 	with codecs.open(dest, "w", "utf-8") as f:
 		f.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
 			"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"\n" +

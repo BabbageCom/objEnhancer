@@ -94,4 +94,3 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			nextHandler()
 
 	event_becomeNavigatorObject=event_gainFocus=event_focusEntered
-	

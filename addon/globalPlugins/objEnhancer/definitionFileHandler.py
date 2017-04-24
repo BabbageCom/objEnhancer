@@ -18,7 +18,7 @@ defFileSpec=ConfigObj(BytesIO("""[__many__]
 		[[options]]
 			raiseOutputErrors = boolean(default=True)
 			ignoreNonexistentAttributes = boolean(default=True)
-			absoluteLocations = boolean(default=False)
+			absoluteLocations = boolean(default=True)
 		[[output]]"""),
 	indent_type="\t",
 	encoding="UTF-8",

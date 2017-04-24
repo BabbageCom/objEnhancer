@@ -21,7 +21,7 @@ deploy:
   provider: GitHub
   #Replace the secure text here with an encrypted github token (Google "appVeyor encrypted environment variables" for more info).
   auth_token:
-    secure: D6nDTGin+O15mi48HCwAAu4gXJyUMxQd31t84RdWEFlfzYfgbu4FTH2VLC6l46Fy
+    secure: 75vJL1NrdDUZRKMt8viMGtGBBPRpz31f0eoPDfJHm2bCmOTJsc9QxktpIc2n5SOk
   artifact: addon
   draft: false
   prerelease: false

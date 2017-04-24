@@ -19,8 +19,6 @@ defFileSpec=ConfigObj(BytesIO("""[__many__]
 			raiseOutputErrors = boolean(default=True)
 			ignoreNonexistentAttributes = boolean(default=True)
 			absoluteLocations = boolean(default=False)
-			ignoreGainFocusEvent = boolean(default=False)
-			ignoreBecomeNavigatorObjectEvent = boolean(default=False)
 		[[output]]"""),
 	indent_type="\t",
 	encoding="UTF-8",

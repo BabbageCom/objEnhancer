@@ -36,7 +36,7 @@ def evaluateObjAttrs(obj,spec):
 		attr=attrs[i]
 		exVal=expectedValues[i]
 		actVal=actualValues[i]
-		if not options.get('absoluteLocations',False) and 'location' in attr:
+		if not options.get('absoluteLocations',True) and 'location' in attr:
 			relativeLocations[attr]=tuple(map(sub,exVal,actVal))
 		elif actVal==exVal:
 			matches+=1

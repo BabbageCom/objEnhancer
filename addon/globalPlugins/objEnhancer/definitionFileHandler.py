@@ -45,7 +45,7 @@ def availableDefinitionFiles():
 		if not fileName.endswith(u'.objdef.ini'):
 			continue	
 		appName=fileName.rsplit('.',2)[0].encode('mbcs')
-		yield (appName,os.path.join(definitionFilePath,fileName))
+		yield (appName,os.path.abspath(os.path.join(definitionFilePath,fileName)))
 
 def getDefinitionFileFromAppName(appName,errorNotFound=False):
 	filePath=os.path.abspath(os.path.join(getDefinitionFileDir(),"{name}.objdef.ini".format(name=appName.replace(".","_"))))

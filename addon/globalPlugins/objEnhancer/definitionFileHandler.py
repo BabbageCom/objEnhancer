@@ -48,7 +48,7 @@ def availableDefinitionFiles():
 		yield (appName,os.path.join(definitionFilePath,fileName))
 
 def getDefinitionFileFromAppName(appName,errorNotFound=False):
-	filePath=os.path.join(getDefinitionFileDir(),"{name}.objdef.ini".format(name=appName.replace(".","_")))
+	filePath=os.path.abspath(os.path.join(getDefinitionFileDir(),"{name}.objdef.ini".format(name=appName.replace(".","_"))))
 	if errorNotFound and not os.path.isfile(filePath):
 		raise IOError("{path} does not exist".format(path=filePath))
 	return filePath

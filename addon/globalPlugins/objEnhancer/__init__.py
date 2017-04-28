@@ -16,10 +16,13 @@ import definitionEvaluator
 from copy import deepcopy
 import appModuleHandler
 from tones import beep
+import dialogs
+from NVDAObjects import NVDAObject
 #We need to initialize translation and localization support:
 addonHandler.initTranslation()
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
+	scriptCategory = _("Obj Enhancer")
 
 	def __init__(self):
 		super(GlobalPlugin, self).__init__()
@@ -94,3 +97,12 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			nextHandler()
 
 	event_becomeNavigatorObject=event_gainFocus=event_focusEntered
+
+	def script_navigatorObject_label(self,gesture):
+		obj=api.getNavigatorObject()
+		if not isinstance(obj,NVDAObject):
+			# Translators: Reported when the user tries to perform a command related to the navigator object
+			# but there is no current navigator object.
+			ui.message(_("No navigator object"))
+			return
+

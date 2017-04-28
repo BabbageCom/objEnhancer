@@ -147,3 +147,9 @@ class CriteriaPanel(wx.Panel):
 		self.editIndex = index
 		self.criteriaList.SetFocus()
 
+class OptionsPanel(wx.Panel):
+
+	def __init__(self, spec, parent=None, id=wx.ID_ANY):
+		if not isinstance(spec,dict):
+			raise ValueError("Invalid specification provided: %s"%spec)
+		options=spec.get("options",{})

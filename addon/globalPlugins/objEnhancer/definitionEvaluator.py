@@ -55,6 +55,7 @@ def manipulateObject(obj,spec):
 	if not (isinstance(spec,dict) and output):
 		raise ValueError("Invalid specification provided: %s"%spec)
 	options=spec.get('options',{})
+	setattr(obj,'objEnhancerSpec',spec)
 	for attr,val in output.iteritems():
 		if not options.get('ignoreNonexistentAttributes',True):
 			try:

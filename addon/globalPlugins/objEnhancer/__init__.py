@@ -12,12 +12,15 @@ from configobj import ConfigObj
 import os
 from logHandler import log
 from validate import Validator
+import api
 import definitionEvaluator
 from copy import deepcopy
 import appModuleHandler
 from tones import beep
 import dialogs
 from NVDAObjects import NVDAObject
+import gui
+import wx
 #We need to initialize translation and localization support:
 addonHandler.initTranslation()
 
@@ -98,11 +101,16 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	event_becomeNavigatorObject=event_gainFocus=event_focusEntered
 
-	def script_navigatorObject_label(self,gesture):
+	def script_navigatorObject_enhance(self,gesture):
 		obj=api.getNavigatorObject()
 		if not isinstance(obj,NVDAObject):
 			# Translators: Reported when the user tries to perform a command related to the navigator object
 			# but there is no current navigator object.
 			ui.message(_("No navigator object"))
 			return
+		wx.CallAfter(gui.mainFrame._popupSettingsDialog,dialogs.SingleDefinitionDialog,obj=obj,spec=getattr(obj,'objEnhancerSpec',{}))
+	script_navigatorObject_enhance.__doc__=_("Customize the properties of the navigator object")
 
+	__gestures = {
+		"kb:NVDA+control+tab":"navigatorObject_enhance"
+	}

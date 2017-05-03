@@ -10,18 +10,18 @@ import gui
 import configobj
 import controlTypes
 import addonHandler
+import NVDAObjects
 addonHandler.initTranslation()
 
 class CriteriaPanel(wx.Panel):
 
-	def __init__(self, type, spec, parent=None, id=wx.ID_ANY):
+	def __init__(self, parent, type, data={}, obj=None, id=wx.ID_ANY):
 		if type not in ("input","output"):
 			raise ValueError("Invalid type provided: %s"%type)
-		if not isinstance(spec,dict):
+		if not isinstance(data,dict):
 			raise ValueError("Invalid specification provided: %s"%spec)
-		data=spec.get(type,{})
-		super(CriteriaPanel, self).__init__(parent, id)
 		self.data=data
+		super(CriteriaPanel, self).__init__(parent, id)
 		self.itemToDataMapping=[]
 		sizer = gui.guiHelper.BoxSizerHelper(self, orientation=wx.HORIZONTAL)
 		# Translators: The label for criteria list.
@@ -32,7 +32,7 @@ class CriteriaPanel(wx.Panel):
 		self.criteriaList.InsertColumn(0, _("Property"))
 		# Translators: The label for a column in criteria list used to identify a criterium's value.
 		self.criteriaList.InsertColumn(1, _("Value"))
-		for attr,val in data.iteritems():
+		for attr,val in self.data.iteritems():
 			item = self.criteriaList.Append((attr,val))
 			self.itemToDataMapping.insert(item,attr)
 		self.criteriaList.Bind(wx.EVT_LIST_ITEM_FOCUSED, self.onListItemFocused)
@@ -82,8 +82,8 @@ class CriteriaPanel(wx.Panel):
 
 	def onCriteriumEdited(self):
 		if self.editIndex is not -1:
-			# Delete the criterium the user was just editing.
-			del self.data[self.itemToDataMapping[self.editIndex]]
+			# Rename the criterium the user was just editing.
+			self.data.rename(self.itemToDataMapping[self.editIndex],self.propertyEdit.Value)
 			attr = self.itemToDataMapping[self.editIndex]=self.propertyEdit.Value
 			val = self.valueEdit.Value
 			self.data[attr]=val
@@ -104,36 +104,7 @@ class CriteriaPanel(wx.Panel):
 		evt.Skip()
 
 	def OnAddClick(self, evt):
-		with AddCriteriumDialog(self) as entryDialog:
-			if entryDialog.ShowModal() != wx.ID_OK:
-				return
-			identifier = entryDialog.identifierTextCtrl.GetValue()
-			if not identifier:
-				return
-		for index, criterium in enumerate(self.criteriums):
-			if identifier == criterium.identifier:
-				# Translators: An error reported in the Criterium Pronunciation dialog when adding a criterium that is already present.
-				gui.messageBox(_('Criterium "%s" is already present.') % identifier,
-					_("Error"), wx.OK | wx.ICON_ERROR)
-				self.criteriumsList.Select(index)
-				self.criteriumsList.Focus(index)
-				self.criteriumsList.SetFocus()
-				return
-		addedCriterium = characterProcessing.SpeechCriterium(identifier)
-		try:
-			del self.pendingRemovals[identifier]
-		except KeyError:
-			pass
-		addedCriterium.displayName = identifier
-		addedCriterium.replacement = ""
-		addedCriterium.level = characterProcessing.SYMLVL_ALL
-		addedCriterium.preserve = characterProcessing.SYMPRES_NEVER
-		self.criteriums.append(addedCriterium)
-		item = self.criteriumsList.Append((addedCriterium.displayName,))
-		self.updateListItem(item, addedCriterium)
-		self.criteriumsList.Select(item)
-		self.criteriumsList.Focus(item)
-		self.criteriumsList.SetFocus()
+		return
 
 	def OnRemoveClick(self, evt):
 		index = self.criteriaList.GetFirstSelected()
@@ -149,7 +120,39 @@ class CriteriaPanel(wx.Panel):
 
 class OptionsPanel(wx.Panel):
 
-	def __init__(self, spec, parent=None, id=wx.ID_ANY):
-		if not isinstance(spec,dict):
+	def __init__(self, options={}, parent=None, id=wx.ID_ANY):
+		if not isinstance(options,dict):
 			raise ValueError("Invalid specification provided: %s"%spec)
-		options=spec.get("options",{})
+
+class SingleDefinitionDialog(gui.SettingsDialog):
+
+	def __init__(self,parent, obj=None, spec={}):
+		if not obj and not spec:
+			raise ValueError("spec or obj must me supplied")
+		elif spec and not isinstance(spec,dict):
+			raise ValueError("Invalid spec provided")
+		elif obj and not isinstance(obj,NVDAObjects.NVDAObject):
+			raise ValueError("Invalid object provided")
+		elif isinstance(spec,configobj.Section):
+			self.title=_("Editing definition (%s)")%next(s for s in spec.parent if spec.parent[s] is spec)
+		else:
+			self.title=_("New definition")
+		self.spec=spec
+		self.obj=obj
+		super(SingleDefinitionDialog,self).__init__(parent)
+
+	def makeSettings(self, settingsSizer):
+		settingsSizerHelper = gui.guiHelper.BoxSizerHelper(self, sizer=settingsSizer)
+		nameText=_("Identifying name")
+		self.nameEdit = settingsSizerHelper.addLabeledControl(nameText, wx.TextCtrl)
+		if self.spec.get('input') is None:
+			self.spec['input']={}
+		self.inputPanel=CriteriaPanel(parent=self,data=self.spec['input'],obj=self.obj,type='input')
+		settingsSizerHelper.addItem(self.inputPanel)
+		if self.spec.get('output') is None:
+			self.spec['output']={}
+		self.outputPanel=CriteriaPanel(parent=self,data=self.spec['output'],obj=self.obj,type='output')
+		settingsSizerHelper.addItem(self.outputPanel)
+
+	def postInit(self):
+		self.nameEdit.SetFocus()

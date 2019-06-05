@@ -19,15 +19,17 @@ addon_info = {
 	# Translators: Long description to be shown for this add-on on add-on information from add-ons manager
 	"addon_description" : _("Changing NVDA object properties made easy"),
 	# version
-	"addon_version" : "2017.1",
+	"addon_version" : "2019.1",
 	# Author(s)
-	"addon_author" : "Babbage B.V. <info@babbage.com>",
+	"addon_author" : "Leonard de Ruijter (Babbage B.V.) <leonard@babbage.com>",
 	# URL for the add-on documentation support
-	
-	"addon_url" : None,
-	
+	"addon_url" : "https://www.babbage.com/",
 	# Documentation file name
 	"addon_docFileName" : "readme.html",
+	# Minimum NVDA version supported
+	"addon_minimumNVDAVersion" : "2018.4.0",
+	# Last NVDA version supported/tested
+	"addon_lastTestedNVDAVersion" : "2019.3.0",
 }
 
 

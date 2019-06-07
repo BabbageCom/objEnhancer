@@ -8,18 +8,18 @@
 import globalVars
 import os
 from logHandler import log
-from configobj import ConfigObj
-from io import BytesIO
-from validate import Validator
+from configobj import ConfigObj, flatten_errors
+from io import StringIO
+from configobj.validate import Validator, ValidateError
 import controlTypes
 
-defFileSpec=ConfigObj(BytesIO("""[__many__]
+defFileSpec=ConfigObj(StringIO(u"""[__many__]
 	[[input]]
-		[[options]]
-			raiseOutputErrors = boolean(default=True)
-			ignoreNonexistentAttributes = boolean(default=True)
-			absoluteLocations = boolean(default=True)
-		[[output]]"""),
+		___many___ = list(default=list())
+	[[options]]
+		absoluteLocations = boolean(default=True)
+		handleDefinitionErrors = option("ignore", "break", "raise", default="raise")
+	[[output]]"""),
 	indent_type="\t",
 	encoding="UTF-8",
 	interpolation=False,
@@ -57,23 +57,32 @@ def getDefinitionOBjFromDefinitionFile(definitionFile,create=True):
 	# configObj objects are created even when the file doesn't exist
 	if not os.path.isabs(definitionFile):
 		raise ValueError("Absolute path required")
-	try:
-		obj=ConfigObj(
-			infile=definitionFile,
-			raise_errors=True,
-			create_empty=create,
-			file_error=not create,
-			indent_type="\t",
-			encoding="UTF-8",
-			interpolation=False,
-			unrepr=True,
-			configspec=defFileSpec
-		)
-		obj.newlines = "\r\n"
-		val = Validator()
-		obj.validate(val)
-	except Exception as e:
-		raise e
+	obj=ConfigObj(
+		infile=definitionFile,
+		raise_errors=True,
+		create_empty=create,
+		file_error=not create,
+		indent_type="\t",
+		encoding="UTF-8",
+		interpolation=False,
+		unrepr=True,
+		configspec=defFileSpec
+	)
+	obj.newlines = "\r\n"
+	val = Validator()
+	res = obj.validate(val, preserve_errors=True)
+	errors = []
+	for section_list, key, error in flatten_errors(obj, res):
+		if key is not None:
+			section_list.append(key)
+		else:
+			section_list.append('[missing section]')
+		section_string = ', '.join(section_list)
+		if error == False:
+			error = 'Missing value or section.'
+		errors.append(section_string + ' = ' + error.message)
+	if errors:
+		raise ValidateError("Errors in %s: %s" % (definitionFile, "; ".join(errors)))
 	return obj
 
 def getDefinitionOBjFromAppName(appName,create=True):

@@ -21,6 +21,7 @@ import dialogs
 from NVDAObjects import NVDAObject
 import gui
 import wx
+from scriptHandler import script
 #We need to initialize translation and localization support:
 addonHandler.initTranslation()
 
@@ -80,27 +81,24 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		# This will return None if no definitions available. Note that an empty dictionary will evaluate to False as well
 		return self.definitions.get(name)
 
-	def event_focusEntered(self,obj,nextHandler):
-		try:
-			appDefs=self.getDefinitionsForAppModule(obj.appModule)
-			globalDefs=self.definitions['global']
-			if appDefs:
-				relevantDefs=deepcopy(appDefs)
-				relevantDefs.merge(globalDefs)
-			else:
-				relevantDefs=globalDefs
-			if not relevantDefs:
-				return
-			matches={matchCount:definition for (matchCount,definition) in definitionEvaluator.findMatchingDefinitionsForObj(obj,relevantDefs)}
-			if not matches:
-				return
-			objDefinition=matches[max(m for m in matches)]
-			definitionEvaluator.manipulateObject(obj,objDefinition)
-		finally:
-			nextHandler()
+	def chooseNVDAObjectOverlayClasses(self,obj,clsList):
+		appDefs=self.getDefinitionsForAppModule(obj.appModule)
+		globalDefs=self.definitions['global']
+		if appDefs:
+			relevantDefs=deepcopy(appDefs)
+			relevantDefs.merge(globalDefs)
+		else:
+			relevantDefs=globalDefs
+		if not relevantDefs:
+			return
+		definition = definitionEvaluator.findMatchingDefinitionsForObj(obj,relevantDefs)
+		if definition:
+			clsList.insert(0, definitionEvaluator.getOverlayClassForDefinition(definition))
 
-	event_becomeNavigatorObject=event_gainFocus=event_focusEntered
-
+	@script(
+		description=_("Customize the properties of the navigator object"),
+		gesture="kb:NVDA+control+tab"
+	)
 	def script_navigatorObject_enhance(self,gesture):
 		obj=api.getNavigatorObject()
 		if not isinstance(obj,NVDAObject):
@@ -109,8 +107,4 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			ui.message(_("No navigator object"))
 			return
 		wx.CallAfter(gui.mainFrame._popupSettingsDialog,dialogs.SingleDefinitionDialog,obj=obj,spec=getattr(obj,'objEnhancerSpec',{}))
-	script_navigatorObject_enhance.__doc__=_("Customize the properties of the navigator object")
 
-	__gestures = {
-		"kb:NVDA+control+tab":"navigatorObject_enhance"
-	}

@@ -63,8 +63,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			self.loadDefinition('global',create=True)
 
 	def unloadDefinitions(self):
-		# We do not use iteritems here as the dictionary changes in the for loop
-		for app,obj in self.definitions.items():
+		# We do not use items here as the dictionary changes in the for loop
+		for app,obj in list(self.definitions.items()):
 			self.unloadDefinition(app,obj)
 
 	def terminate(self):

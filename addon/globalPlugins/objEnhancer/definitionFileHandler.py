@@ -16,6 +16,7 @@ import controlTypes
 defFileSpec=ConfigObj(StringIO(u"""[__many__]
 	[[input]]
 		___many___ = list(default=list())
+	[[functions]]
 	[[options]]
 		absoluteLocations = boolean(default=True)
 		handleDefinitionErrors = option("ignore", "break", "raise", default="raise")

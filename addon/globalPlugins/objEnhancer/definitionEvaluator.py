@@ -13,6 +13,8 @@ from operator import sub, attrgetter
 import itertools
 from locationHelper import RectLTWH
 from configobj import Section
+from . import utils
+from types import MethodType
 
 def evaluateObjAttrs(obj,definition):
 	if not isinstance(obj,NVDAObject):
@@ -21,10 +23,22 @@ def evaluateObjAttrs(obj,definition):
 	if not (isinstance(definition, Section) and input):
 		raise ValueError("Invalid definition spesification provided: %s"%definition)
 	options=definition.get('options',{})
+	functions=definition.get('functions',{})
 	for attr, possibleVals in input.items():
+		params = functions.get(attr)
 		try:
 			# Use attrgetter to support fetching attributes on children
-			val = attrgetter(attr)(obj)
+			try:
+				val = attrgetter(attr)(obj)
+			except AtributeError:
+				func = vars(utils).get(attr)
+				if not callable(func):
+					raise
+				val = MethodType(func, obj)
+			if (callable(val) and not params) or (not callable(val) and params):
+				raise TypeError("Function definition missmatch")
+			if callable(val):
+				val = val(**params)
 		except:
 			handleErrors = options['handleDefinitionErrors']
 			if handleErrors == "raise":

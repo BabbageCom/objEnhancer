@@ -7,17 +7,17 @@
 
 import addonHandler
 import globalPluginHandler
-import definitionFileHandler
+from . import definitionFileHandler
 from configobj import ConfigObj
 import os
 from logHandler import log
 from validate import Validator
 import api
-import definitionEvaluator
+from . import definitionEvaluator
 from copy import deepcopy
 import appModuleHandler
 from tones import beep
-import dialogs
+from . import dialogs
 from NVDAObjects import NVDAObject
 import gui
 import wx

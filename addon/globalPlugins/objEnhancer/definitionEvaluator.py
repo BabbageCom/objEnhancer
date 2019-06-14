@@ -16,7 +16,7 @@ from configobj import Section
 from . import utils
 from types import MethodType
 
-def evaluateObjAttrs(obj,definition):
+def evaluateObjAttrs(obj,definition, cache):
 	if not isinstance(obj,NVDAObject):
 		raise ValueError("Invalid NVDAObject definitionified: %s"%obj)
 	input=definition.get('input',{})
@@ -26,27 +26,29 @@ def evaluateObjAttrs(obj,definition):
 	functions=definition.get('functions',{})
 	for attr, possibleVals in input.items():
 		params = functions.get(attr)
-		try:
-			# Use attrgetter to support fetching attributes on children
+		val = cache.get((attr, params))
+		if not val:
 			try:
-				val = attrgetter(attr)(obj)
-			except AtributeError:
-				func = vars(utils).get(attr)
-				if not callable(func):
+				# Use attrgetter to support fetching attributes on children
+				try:
+					val = attrgetter(attr)(obj)
+				except AtributeError:
+					func = vars(utils).get(attr)
+					if not callable(func):
+						raise
+					val = MethodType(func, obj)
+				if (callable(val) and not params) or (not callable(val) and params):
+					raise TypeError("Function definition missmatch")
+				if callable(val):
+					val = val(**params)
+			except:
+				handleErrors = options['handleDefinitionErrors']
+				if handleErrors == "raise":
 					raise
-				val = MethodType(func, obj)
-			if (callable(val) and not params) or (not callable(val) and params):
-				raise TypeError("Function definition missmatch")
-			if callable(val):
-				val = val(**params)
-		except:
-			handleErrors = options['handleDefinitionErrors']
-			if handleErrors == "raise":
-				raise
-			elif handleErrors == "break":
-				break
-			elif handleErrors == "ignore":
-				continue
+				elif handleErrors == "break":
+					break
+				elif handleErrors == "ignore":
+					continue
 		if val in possibleVals:
 			continue
 		elif not options.get('absoluteLocations',True) and attr=='location':
@@ -80,7 +82,8 @@ def getOverlayClassForDefinition(definition):
 def findMatchingDefinitionsForObj(obj,definitions):
 	if not isinstance(definitions,configobj.ConfigObj):
 		raise ValueError("Invalid spesification provided: %s"%definitions)
+	objCache = {}
 	for definition in definitions.values():
-		if evaluateObjAttrs(obj,definition):
+		if evaluateObjAttrs(obj,definition, objCache):
 			return definition
 	return None

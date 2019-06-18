@@ -19,7 +19,7 @@ defFileSpec=ConfigObj(StringIO(u"""[__many__]
 	[[functions]]
 	[[options]]
 		absoluteLocations = boolean(default=True)
-		handleDefinitionErrors = option("ignore", "break", "raise", default="raise")
+		handleDefinitionErrors = option("ignore", "break", "raise", default="break")
 	[[output]]"""),
 	indent_type="\t",
 	encoding="UTF-8",

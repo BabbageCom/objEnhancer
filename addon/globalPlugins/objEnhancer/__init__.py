@@ -22,6 +22,8 @@ from NVDAObjects import NVDAObject
 import gui
 import wx
 from scriptHandler import script
+from .utils import bitmapHash
+import ui
 #We need to initialize translation and localization support:
 addonHandler.initTranslation()
 
@@ -108,3 +110,12 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return
 		wx.CallAfter(gui.mainFrame._popupSettingsDialog,dialogs.SingleDefinitionDialog,obj=obj,spec=getattr(obj,'objEnhancerSpec',{}))
 
+	@script(
+		description=_("Copies the base64 encoded SHA1 hash of the bitmap of the navigator object to the clipboard"),
+		gesture="kb:NVDA+control+alt+h"
+	)
+	def script_copyHashToClipboard(self, gesture):
+		if api.copyToClip(bitmapHash(api.getNavigatorObject()).decode("ascii")):
+			ui.message("Hash copied to clipboard")
+		else:
+			ui.message("Couldn't copy hash to clipboard")

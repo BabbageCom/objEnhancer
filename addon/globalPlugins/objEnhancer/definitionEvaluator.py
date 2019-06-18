@@ -25,30 +25,34 @@ def evaluateObjAttrs(obj,definition, cache):
 	options=definition.get('options',{})
 	functions=definition.get('functions',{})
 	for attr, possibleVals in input.items():
-		params = functions.get(attr)
-		val = cache.get((attr, params))
+		params = functions.get(attr, {})
+		tupleParams = tuple(params.items())
+		val = cache.get((attr, tupleParams))
 		if not val:
 			try:
 				# Use attrgetter to support fetching attributes on children
 				try:
 					val = attrgetter(attr)(obj)
-				except AtributeError:
+				except AttributeError:
 					func = vars(utils).get(attr)
 					if not callable(func):
 						raise
 					val = MethodType(func, obj)
-				if (callable(val) and not params) or (not callable(val) and params):
+				if not callable(val) and params:
 					raise TypeError("Function definition missmatch")
-				if callable(val):
+				elif callable(val):
 					val = val(**params)
 			except:
 				handleErrors = options['handleDefinitionErrors']
 				if handleErrors == "raise":
 					raise
-				elif handleErrors == "break":
-					break
-				elif handleErrors == "ignore":
-					continue
+				else:
+					log.exception("Error while handling objEnhancer definition %r" % definition.dict())
+					if handleErrors == "break":
+						break
+					elif handleErrors == "ignore":
+						continue
+			cache[(attr, tupleParams)] = val
 		if val in possibleVals:
 			continue
 		elif not options.get('absoluteLocations',True) and attr=='location':

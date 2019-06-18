@@ -8,6 +8,6 @@ def locationBitmapHash(location):
 	digest = hashlib.sha1(pixels).digest()
 	return base64.b64encode(digest)
 
-def bitmapHash(obj, padding=8):
+def bitmapHash(obj, padding=10):
 	location = obj.location.expandOrShrink(-1*padding)
 	return locationBitmapHash(location)

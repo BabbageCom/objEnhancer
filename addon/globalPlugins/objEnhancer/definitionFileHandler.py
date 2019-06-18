@@ -14,6 +14,8 @@ from configobj.validate import Validator, ValidateError
 import controlTypes
 
 defFileSpec=ConfigObj(StringIO(u"""[__many__]
+	parent = string(default="")
+	isAbstract = boolean(default=False)
 	[[input]]
 		___many___ = list(default=list())
 	[[functions]]
@@ -84,6 +86,16 @@ def getDefinitionOBjFromDefinitionFile(definitionFile,create=True):
 		errors.append(section_string + ' = ' + error.message)
 	if errors:
 		raise ValidateError("Errors in %s: %s" % (definitionFile, "; ".join(errors)))
+	for name, definition in obj.items():
+		parent = definition[parent]
+		try:
+			parentDef = obj[parent]
+		except KeyError:
+			log.error("Definition %s refered to unknown parent %s" % (name, parent))
+			continue
+		temp = definition.dict()
+		definition.merge(parentDef, decoupled=True)
+		definition.merge(temp)
 	return obj
 
 def getDefinitionOBjFromAppName(appName,create=True):

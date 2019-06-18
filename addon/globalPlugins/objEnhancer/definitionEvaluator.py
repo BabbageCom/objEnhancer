@@ -12,15 +12,14 @@ from logHandler import log
 from operator import sub, attrgetter
 import itertools
 from locationHelper import RectLTWH
-from configobj import Section
 from . import utils
 from types import MethodType
 
-def evaluateObjAttrs(obj,definition, cache):
+def evaluateObjAttrs(obj, definition, cache):
 	if not isinstance(obj,NVDAObject):
 		raise ValueError("Invalid NVDAObject definitionified: %s"%obj)
 	input=definition.get('input',{})
-	if not (isinstance(definition, Section) and input):
+	if not (isinstance(definition, dict) and input):
 		raise ValueError("Invalid definition spesification provided: %s"%definition)
 	options=definition.get('options',{})
 	functions=definition.get('functions',{})
@@ -47,7 +46,7 @@ def evaluateObjAttrs(obj,definition, cache):
 				if handleErrors == "raise":
 					raise
 				else:
-					log.exception("Error while handling objEnhancer definition %r" % definition.dict())
+					log.exception("Error while handling objEnhancer definition %r" % definition)
 					if handleErrors == "break":
 						break
 					elif handleErrors == "ignore":
@@ -73,9 +72,8 @@ class ObjEnhancerOverlay(NVDAObject):
 
 def getOverlayClassForDefinition(definition):
 	output=definition.get('output',{})
-	if not (isinstance(definition, Section) and output):
+	if not (isinstance(definition, dict) and output):
 		raise ValueError("Invalid definition specification provided: %s"%definition)
-	output = output.dict()
 	output['_objEnhancerDefinition'] = definition
 	return type(
 		"{}{}ObjEnhancerOverlay".format(definition.name[0].upper(), definition.name[1:]),
@@ -87,7 +85,10 @@ def findMatchingDefinitionsForObj(obj,definitions):
 	if not isinstance(definitions,configobj.ConfigObj):
 		raise ValueError("Invalid spesification provided: %s"%definitions)
 	objCache = {}
-	for definition in definitions.values():
-		if evaluateObjAttrs(obj,definition, objCache):
+	for name, definition in definitions.items():
+		if definition['isAbstract']:
+			continue
+		definition = definition.dict()
+		if evaluateObjAttrs(obj, definition, objCache):
 			return definition
 	return None

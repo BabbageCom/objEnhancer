@@ -14,12 +14,13 @@ import itertools
 from locationHelper import RectLTWH
 from . import utils
 from types import MethodType
+from configobj import Section
 
 def evaluateObjAttrs(obj, definition, cache):
 	if not isinstance(obj,NVDAObject):
 		raise ValueError("Invalid NVDAObject definitionified: %s"%obj)
 	input=definition.get('input',{})
-	if not (isinstance(definition, dict) and input):
+	if not (isinstance(definition, Section) and input):
 		raise ValueError("Invalid definition spesification provided: %s"%definition)
 	options=definition.get('options',{})
 	functions=definition.get('functions',{})
@@ -71,12 +72,13 @@ class ObjEnhancerOverlay(NVDAObject):
 	pass
 
 def getOverlayClassForDefinition(definition):
+	name = definition.name[0].upper()+definition.name[1:]
 	output=definition.get('output',{})
-	if not (isinstance(definition, dict) and output):
+	if not (isinstance(definition, Section) and output):
 		raise ValueError("Invalid definition specification provided: %s"%definition)
 	output['_objEnhancerDefinition'] = definition
 	return type(
-		"{}{}ObjEnhancerOverlay".format(definition.name[0].upper(), definition.name[1:]),
+		"{}ObjEnhancerOverlay".format(name),
 		(ObjEnhancerOverlay,),
 		output
 	)
@@ -88,7 +90,15 @@ def findMatchingDefinitionsForObj(obj,definitions):
 	for name, definition in definitions.items():
 		if definition['isAbstract']:
 			continue
-		definition = definition.dict()
+		parent = definition["parent"]
+		if parent:
+			try:
+				parentDef = definitions[parent]
+			except KeyError:
+				log.error("Definition %s refered to unknown parent %s" % (name, parent))
+				continue
+			if not evaluateObjAttrs(obj, parentDef, objCache):
+				return None
 		if evaluateObjAttrs(obj, definition, objCache):
 			return definition
 	return None

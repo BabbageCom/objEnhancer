@@ -11,7 +11,7 @@ from . import definitionFileHandler
 from configobj import ConfigObj
 import os
 from logHandler import log
-from validate import Validator
+from configobj.validate import Validator
 import api
 from . import definitionEvaluator
 from copy import deepcopy

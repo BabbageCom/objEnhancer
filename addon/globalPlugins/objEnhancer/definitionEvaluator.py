@@ -76,6 +76,7 @@ def getOverlayClassForDefinition(definition):
 	output=definition.get('output',{})
 	if not (isinstance(definition, Section) and output):
 		raise ValueError("Invalid definition specification provided: %s"%definition)
+	output = output.dict()
 	output['_objEnhancerDefinition'] = definition
 	return type(
 		"{}ObjEnhancerOverlay".format(name),

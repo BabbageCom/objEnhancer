@@ -19,7 +19,7 @@ addon_info = {
 	# Translators: Long description to be shown for this add-on on add-on information from add-ons manager
 	"addon_description" : _("Changing NVDA object properties made easy"),
 	# version
-	"addon_version" : "2019.1",
+	"addon_version" : "2019.2",
 	# Author(s)
 	"addon_author" : "Leonard de Ruijter (Babbage B.V.) <leonard@babbage.com>",
 	# URL for the add-on documentation support

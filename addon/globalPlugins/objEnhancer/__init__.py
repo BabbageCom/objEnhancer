@@ -108,7 +108,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			# but there is no current navigator object.
 			ui.message(_("No navigator object"))
 			return
-		wx.CallAfter(gui.mainFrame._popupSettingsDialog,dialogs.SingleDefinitionDialog,obj=obj,spec=getattr(obj,'objEnhancerSpec',{}))
+		wx.CallAfter(
+			gui.mainFrame._popupSettingsDialog,
+			dialogs.SingleDefinitionDialog,
+			obj=obj
+		)
 
 	@script(
 		description=_("Copies the base64 encoded SHA1 hash of the bitmap of the navigator object to the clipboard"),

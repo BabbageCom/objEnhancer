@@ -10,7 +10,9 @@ import gui
 import configobj
 import controlTypes
 import addonHandler
+from .definitionEvaluator import ObjEnhancerOverlay
 import NVDAObjects
+from copy import copy
 addonHandler.initTranslation()
 
 # Used to ensure that event handlers call Skip(). Not calling skip can cause focus problems for controls. More
@@ -24,7 +26,7 @@ def skipEventAndCall(handler):
 		return handler()
 	return wrapWithEventSkip
 
-outputProperties = [
+outputAttributes = [
 	"description",
 	"name",
 	"placeholder",
@@ -33,41 +35,161 @@ outputProperties = [
 	"roleText"
 ]
 
-inputProperties = [
+inputAttributes = [
 	"location",
 	"role",
 	"windowClassName",
 	"windowControlID"
 ]
 
-class AddEntryDialog(wx.Dialog):
+class AddInputEntryDialog(wx.Dialog):
 
-	def __init__(self, parent, title, properties):
+	@classmethod
+	def getObjectVars(cls, obj):
+		for attr in dir(obj):
+			if attr not in inputAttributes:
+				continue
+			if attr.startswith("_"):
+				continue
+			try:
+				val = getattr(obj, attr, None)
+			except:
+				continue
+			if callable(val) or val is None:
+				continue
+			yield (attr, val)
+
+	def __init__(self, parent, title, obj):
 		super().__init__(parent, title=title)
+		self.objectVars = list(self.getObjectVars(obj))
+
 		mainSizer=wx.BoxSizer(wx.VERTICAL)
 		sHelper = gui.guiHelper.BoxSizerHelper(self, orientation=wx.VERTICAL)
 
-		propertySizer = wx.BoxSizer(wx.HORIZONTAL)
-		# Translators: This is the label for the edit field.
-		propertyText = _("Property:")
-		propertyLabel = wx.StaticText(self, label=propertyText)
-		propertySizer.Add(propertyLabel, flag=wx.ALIGN_CENTER_VERTICAL)
-		propertySizer.AddSpacer(gui.guiHelper.SPACE_BETWEEN_ASSOCIATED_CONTROL_HORIZONTAL)
-		self.propertyCombo = wx.ComboBox(
-			self,
-			choices=properties,
-			style=wx.CB_DROPDOWN
+		varsText = _("&Relevant object attributes:")
+		self.varsList = sHelper.addLabeledControl(
+			varsText, gui.nvdaControls.AutoWidthColumnListCtrl,
+			autoSizeColumn=2,
+			itemTextCallable=self.getItemTextForVarsList,
+			style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.LC_VIRTUAL
 		)
-		propertySizer.Add(self.propertyCombo)
-		sHelper.addItem(propertySizer)
+		self.varsList.ItemCount = len(self.objectVars)
+		# Translators: The label for a column in input list used to identify an entry.
+		self.varsList.InsertColumn(0, _("Attribute"))
+		# Translators: The label for a column in input list used to identify an item's value.
+		self.varsList.InsertColumn(1, _("Value"))
+		self.varsList.Bind(wx.EVT_LIST_ITEM_FOCUSED, self.onVarsListItemFocused)
+
+		attributeText = _("A&ttribute:")
+		self.attributeEdit = sHelper.addLabeledControl(attributeText, wx.TextCtrl)
+
+		valueText = _("&Value:")
+		self.valueEdit = sHelper.addLabeledControl(valueText, wx.TextCtrl)
 
 		sHelper.addDialogDismissButtons(self.CreateButtonSizer(wx.OK | wx.CANCEL))
 
 		mainSizer.Add(sHelper.sizer, border=gui.guiHelper.BORDER_FOR_DIALOGS, flag=wx.ALL)
 		mainSizer.Fit(self)
 		self.SetSizer(mainSizer)
-		self.propertyCombo.SetFocus()
+		self.varsList.SetFocus()
 		self.CentreOnScreen()
+
+	def getItemTextForVarsList(self, item, column):
+		return str(self.objectVars[item][column])
+
+	def onVarsListItemFocused(self, evt):
+		index = evt.Index
+		self.attributeEdit.Value = self.objectVars[index][0]
+		value = self.objectVars[index][1]
+		if isinstance(value, tuple):
+			value = tuple.__repr__(value)
+		else:
+			value = str(value)
+		self.valueEdit.Value = value
+
+class EditInputEntryDialog(wx.Dialog):
+
+	def __init__(self, parent, title, values):
+		super().__init__(parent, title=title)
+		self.values = copy(values)
+
+		mainSizer=wx.BoxSizer(wx.VERTICAL)
+		sHelper = gui.guiHelper.BoxSizerHelper(self, orientation=wx.VERTICAL)
+
+		valuesText = f"&{title}"
+		self.valuesList = sHelper.addLabeledControl(
+			valuesText, gui.nvdaControls.AutoWidthColumnListCtrl,
+			itemTextCallable=self.getItemTextForValuesList,
+			style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.LC_VIRTUAL
+		)
+		self.valuesList.ItemCount = len(self.values)
+		# Translators: The label for a column in input list used to identify an entry.
+		self.valuesList.InsertColumn(0, _("Value"))
+		self.valuesList.Bind(wx.EVT_LIST_ITEM_FOCUSED, self.onValuesListItemFocused)
+
+		valueText = _("&Value:")
+		self.valueEdit = sHelper.addLabeledControl(valueText, wx.TextCtrl)
+		self.valueEdit.Bind(wx.EVT_TEXT, skipEventAndCall(self.onItemEdited))
+
+		bHelper = sHelper.addItem(gui.guiHelper.ButtonHelper(orientation=wx.HORIZONTAL))
+
+		# Translators: The label for a button to add a new entry.
+		self.addButton = bHelper.addButton(self, label=_("&Add"))
+		# Translators: The label for a button to remove an entry.
+		self.removeButton = bHelper.addButton(self, label=_("Re&move"))
+		self.removeButton.Disable()
+
+		self.addButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.onAddClick))
+		self.removeButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.onRemoveClick))
+
+		sHelper.addDialogDismissButtons(self.CreateButtonSizer(wx.OK | wx.CANCEL))
+
+		mainSizer.Add(sHelper.sizer, border=gui.guiHelper.BORDER_FOR_DIALOGS, flag=wx.ALL)
+		mainSizer.Fit(self)
+		self.SetSizer(mainSizer)
+		self.valuesList.SetFocus()
+		self.CentreOnScreen()
+
+	def getItemTextForValuesList(self, item, column):
+		return self.values[item]
+
+	def onItemEdited(self):
+		index = self.valuesList.GetFirstSelected()
+		# Update the entry the user was just editing.
+		entry = self.values
+		val = self.valueEdit.Value
+		entry[index] = val
+
+	def onAddClick(self):
+		self.values.append("")
+		self.valuesList.ItemCount = len(self.values)
+		index = self.valuesList.ItemCount - 1
+		self.valuesList.Select(index)
+		self.valuesList.Focus(index)
+		# We don't get a new focus event with the new index.
+		self.valuesList.sendListItemFocusedEvent(index)
+		self.valueEdit.SetFocus()
+
+	def onRemoveClick(self):
+		index = self.valuesList.GetFirstSelected()
+		del self.values[index]
+		self.valuesList.ItemCount = len(self.values)
+		# sometimes removing may result in an empty list.
+		if not self.valuesList.ItemCount:
+			# disable the controls, since there are no items in the list.
+			self.removeButton.Disable()
+		else:
+			index = min(index, self.valuesList.ItemCount - 1)
+			self.valuesList.Select(index)
+			self.valuesList.Focus(index)
+			# We don't get a new focus event with the new index.
+			self.valuesList.sendListItemFocusedEvent(index)
+		self.valuesList.SetFocus()
+
+	def onValuesListItemFocused(self, evt):
+		index = evt.Index
+		self.valueEdit.Value = self.values[index]
+		self.removeButton.Enable()
 
 class InputPanel(wx.Panel):
 
@@ -77,6 +199,7 @@ class InputPanel(wx.Panel):
 		self.definition = definition
 		self.input = list(definition['input'].items())
 		self.functions = list(definition['functions'].items())
+		self.obj = obj
 		super().__init__(parent, id=wx.ID_ANY)
 		sizer = gui.guiHelper.BoxSizerHelper(self, orientation=wx.HORIZONTAL)
 		# Translators: The label for input list.
@@ -89,7 +212,7 @@ class InputPanel(wx.Panel):
 		)
 		self.inputList.ItemCount = len(self.input)
 		# Translators: The label for a column in input list used to identify an entry.
-		self.inputList.InsertColumn(0, _("Property"))
+		self.inputList.InsertColumn(0, _("Attribute"))
 		# Translators: The label for a column in input list used to identify an item's value.
 		self.inputList.InsertColumn(1, _("Value"))
 		self.inputList.Bind(wx.EVT_LIST_ITEM_FOCUSED, self.onListItemFocused)
@@ -106,9 +229,9 @@ class InputPanel(wx.Panel):
 		self.removeButton = bHelper.addButton(self, label=_("Re&move"))
 		self.removeButton.Disable()
 
-		self.addButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.OnAddClick))
-		self.editButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.OnEditClick))
-		self.removeButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.OnRemoveClick))
+		self.addButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.onAddClick))
+		self.editButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.onEditClick))
+		self.removeButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.onRemoveClick))
 
 		self.SetSizerAndFit(sizer.sizer)
 
@@ -129,27 +252,28 @@ class InputPanel(wx.Panel):
 		self.removeButton.Enable()
 		evt.Skip()
 
-	def OnAddClick(self):
-		with AddEntryDialog(
+	def onAddClick(self):
+		with AddInputEntryDialog(
 			self,
-			title=_("Add filter property"),
-			properties=inputProperties
+			title=_("Add filter attribute"),
+			obj=self.obj
 		) as entryDialog:
 			if entryDialog.ShowModal() != wx.ID_OK:
 				return
-			newAttr = entryDialog.propertyCombo.Value
+			newAttr = entryDialog.attributeEdit.Value
 			if not newAttr:
 				return
+			newValue = entryDialog.valueEdit.Value
 		for index, (attr, val) in enumerate(self.input):
 			if newAttr == attr:
-				# Translators: An error reported when adding an property that is already present.
-				gui.messageBox(_(f'Property {newAttr!r} is already present.'),
+				# Translators: An error reported when adding an attribute that is already present.
+				gui.messageBox(_(f'Attribute {newAttr!r} is already added.'),
 					_("Error"), wx.OK | wx.ICON_ERROR)
 				self.inputList.Select(index)
 				self.inputList.Focus(index)
 				self.inputList.SetFocus()
 				return
-		self.input.append((newAttr, []))
+		self.input.append((newAttr, [newValue]))
 		self.inputList.ItemCount = len(self.input)
 		index = self.inputList.ItemCount - 1
 		self.inputList.Select(index)
@@ -158,10 +282,24 @@ class InputPanel(wx.Panel):
 		self.inputList.sendListItemFocusedEvent(index)
 		self.inputList.SetFocus()
 
-	def OnEditClick(self):
-		return
+	def onEditClick(self):
+		index = self.inputList.GetFirstSelected()
+		attr, values = self.input[index]
+		with EditInputEntryDialog(
+			self,
+			title=_(f"Filter values for {attr}"),
+			values=values,
+		) as entryDialog:
+			if entryDialog.ShowModal() != wx.ID_OK:
+				return
+			newValues = entryDialog.values
+			if not newValues:
+				# Translators: An error reported when adding an attribute that is already present.
+				gui.messageBox(_(f'NO values specified.'),
+					_("Error"), wx.OK | wx.ICON_ERROR)
+			values[:] = newValues
 
-	def OnRemoveClick(self):
+	def onRemoveClick(self):
 		index = self.inputList.GetFirstSelected()
 		del self.input[index]
 		self.inputList.ItemCount = len(self.input)
@@ -179,6 +317,35 @@ class InputPanel(wx.Panel):
 			self.inputList.sendListItemFocusedEvent(index)
 		self.inputList.SetFocus()
 
+class AddOutputEntryDialog(wx.Dialog):
+
+	def __init__(self, parent, title, attributes):
+		super().__init__(parent, title=title)
+		mainSizer=wx.BoxSizer(wx.VERTICAL)
+		sHelper = gui.guiHelper.BoxSizerHelper(self, orientation=wx.VERTICAL)
+
+		attributeSizer = wx.BoxSizer(wx.HORIZONTAL)
+		# Translators: This is the label for the edit field.
+		attributeText = _("Attribute:")
+		attributeLabel = wx.StaticText(self, label=attributeText)
+		attributeSizer.Add(attributeLabel, flag=wx.ALIGN_CENTER_VERTICAL)
+		attributeSizer.AddSpacer(gui.guiHelper.SPACE_BETWEEN_ASSOCIATED_CONTROL_HORIZONTAL)
+		self.attributeCombo = wx.ComboBox(
+			self,
+			choices=attributes,
+			style=wx.CB_DROPDOWN
+		)
+		attributeSizer.Add(self.attributeCombo)
+		sHelper.addItem(attributeSizer)
+
+		sHelper.addDialogDismissButtons(self.CreateButtonSizer(wx.OK | wx.CANCEL))
+
+		mainSizer.Add(sHelper.sizer, border=gui.guiHelper.BORDER_FOR_DIALOGS, flag=wx.ALL)
+		mainSizer.Fit(self)
+		self.SetSizer(mainSizer)
+		self.attributeCombo.SetFocus()
+		self.CentreOnScreen()
+
 class OutputPanel(wx.Panel):
 
 	def __init__(self, parent, definition, obj=None):
@@ -188,7 +355,7 @@ class OutputPanel(wx.Panel):
 		super().__init__(parent, id=wx.ID_ANY)
 		sizer = gui.guiHelper.BoxSizerHelper(self, orientation=wx.HORIZONTAL)
 		# Translators: The label for output list.
-		outputText = _("&Property changes:")
+		outputText = _("&Attribute changes:")
 		self.outputList = sizer.addLabeledControl(
 			outputText,
 			gui.nvdaControls.AutoWidthColumnListCtrl,
@@ -198,7 +365,7 @@ class OutputPanel(wx.Panel):
 		)
 		self.outputList.ItemCount = len(self.output)
 		# Translators: The label for a column in output list used to identify an entry.
-		self.outputList.InsertColumn(0, _("Property"))
+		self.outputList.InsertColumn(0, _("Attribute"))
 		# Translators: The label for a column in output list used to identify an item's value.
 		self.outputList.InsertColumn(1, _("Value"))
 		self.outputList.Bind(wx.EVT_LIST_ITEM_FOCUSED, self.onListItemFocused)
@@ -206,29 +373,29 @@ class OutputPanel(wx.Panel):
 		# Translators: The label for the group of controls to change an item.
 		changeItemText = _("Change output value")
 		changeItemHelper = sizer.addItem(gui.guiHelper.BoxSizerHelper(self, sizer=wx.StaticBoxSizer(wx.StaticBox(self, label=changeItemText), wx.VERTICAL)))
-		propertySizer = wx.BoxSizer(wx.HORIZONTAL)
-		# Translators: The label for the edit field to change the property of an item.
-		propertyText = _("Output &property")
-		propertyLabel = wx.StaticText(self, label=propertyText)
-		propertySizer.Add(propertyLabel, flag=wx.ALIGN_CENTER_VERTICAL)
-		propertySizer.AddSpacer(gui.guiHelper.SPACE_BETWEEN_ASSOCIATED_CONTROL_HORIZONTAL)
-		self.propertyCombo = wx.ComboBox(
+		attributeSizer = wx.BoxSizer(wx.HORIZONTAL)
+		# Translators: The label for the edit field to change the attribute of an item.
+		attributeText = _("Output &attribute:")
+		attributeLabel = wx.StaticText(self, label=attributeText)
+		attributeSizer.Add(attributeLabel, flag=wx.ALIGN_CENTER_VERTICAL)
+		attributeSizer.AddSpacer(gui.guiHelper.SPACE_BETWEEN_ASSOCIATED_CONTROL_HORIZONTAL)
+		self.attributeCombo = wx.ComboBox(
 			self,
-			choices=outputProperties,
+			choices=outputAttributes,
 			style=wx.CB_DROPDOWN
 		)
-		propertySizer.Add(self.propertyCombo)
-		changeItemHelper.addItem(propertySizer)
+		attributeSizer.Add(self.attributeCombo)
+		changeItemHelper.addItem(attributeSizer)
 
-		self.propertyCombo.Bind(wx.EVT_TEXT, skipEventAndCall(self.onItemEdited))
+		self.attributeCombo.Bind(wx.EVT_TEXT, skipEventAndCall(self.onItemEdited))
 
 		# Translators: The label for the edit field to change the value of a criterium.
-		valueText = _("Output &value")
+		valueText = _("Output &value:")
 		self.valueEdit = changeItemHelper.addLabeledControl(valueText, wx.TextCtrl)
 		self.valueEdit.Bind(wx.EVT_TEXT, skipEventAndCall(self.onItemEdited))
 
 		# disable controls until an item is selected
-		self.propertyCombo.Disable()
+		self.attributeCombo.Disable()
 		self.valueEdit.Disable()
 
 		self.editingItem = None
@@ -240,8 +407,8 @@ class OutputPanel(wx.Panel):
 		self.removeButton = bHelper.addButton(self, label=_("Re&move"))
 		self.removeButton.Disable()
 
-		self.addButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.OnAddClick))
-		self.removeButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.OnRemoveClick))
+		self.addButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.onAddClick))
+		self.removeButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.onRemoveClick))
 
 
 		self.SetSizerAndFit(sizer.sizer)
@@ -254,9 +421,9 @@ class OutputPanel(wx.Panel):
 		if self.editingItem is not None:
 			# Update the entry the user was just editing.
 			entry = self.output[self.editingItem]
-			property = self.propertyCombo.Value
+			attribute = self.attributeCombo.Value
 			val = self.valueEdit.Value
-			self.output[self.editingItem] = (property, val)
+			self.output[self.editingItem] = (attribute, val)
 
 	def onListItemFocused(self, evt):
 		# Update the editing controls to reflect the newly selected criterium.
@@ -264,28 +431,28 @@ class OutputPanel(wx.Panel):
 		self.editingItem = index
 		entry = self.output[index]
 		attr, val = entry
-		self.propertyCombo.ChangeValue(attr)
+		self.attributeCombo.ChangeValue(attr)
 		self.valueEdit.ChangeValue(val)
 		self.removeButton.Enable()
-		self.propertyCombo.Enable()
+		self.attributeCombo.Enable()
 		self.valueEdit.Enable()
 		evt.Skip()
 
-	def OnAddClick(self):
-		with AddEntryDialog(
+	def onAddClick(self):
+		with AddOutputEntryDialog(
 			self,
-			title=_("Add output property"),
-			properties=outputProperties
+			title=_("Add output attribute"),
+			attributes=outputAttributes
 		) as entryDialog:
 			if entryDialog.ShowModal() != wx.ID_OK:
 				return
-			newAttr = entryDialog.propertyCombo.Value
+			newAttr = entryDialog.attributeCombo.Value
 			if not newAttr:
 				return
 		for index, (attr, val) in enumerate(self.output):
 			if newAttr == attr:
-				# Translators: An error reported when adding an property that is already present.
-				gui.messageBox(_(f'Property {newAttr!r} is already present.'),
+				# Translators: An error reported when adding an attribute that is already present.
+				gui.messageBox(_(f'Attribute {newAttr!r} is already present.'),
 					_("Error"), wx.OK | wx.ICON_ERROR)
 				self.outputList.Select(index)
 				self.outputList.Focus(index)
@@ -300,7 +467,7 @@ class OutputPanel(wx.Panel):
 		self.outputList.sendListItemFocusedEvent(index)
 		self.valueEdit.SetFocus()
 
-	def OnRemoveClick(self):
+	def onRemoveClick(self):
 		index = self.outputList.GetFirstSelected()
 		del self.output[index]
 		self.outputList.ItemCount = len(self.output)
@@ -308,7 +475,7 @@ class OutputPanel(wx.Panel):
 		if not self.outputList.ItemCount:
 			self.editingItem = None
 			# disable the controls, since there are no items in the list.
-			self.propertyCombo.Disable()
+			self.attributeCombo.Disable()
 			self.valueEdit.Disable()
 			self.removeButton.Disable()
 		else:
@@ -335,6 +502,8 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 		definition = getattr(obj, "_objEnhancerDefinition", {})
 		if isinstance(definition, configobj.Section):
 			self.title=_("Editing definition (%s)") % definition.name
+			assert isinstance(obj, ObjEnhancerOverlay)
+			obj = super(ObjEnhancerOverlay, obj)
 		else:
 			self.title=_("New definition")
 		self.definition=definition
@@ -343,7 +512,7 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 
 	def makeSettings(self, settingsSizer):
 		settingsSizerHelper = gui.guiHelper.BoxSizerHelper(self, sizer=settingsSizer)
-		nameText=_("Identifying name")
+		nameText=_("Identifying name:")
 		self.nameEdit = settingsSizerHelper.addLabeledControl(nameText, wx.TextCtrl)
 		if isinstance(self.definition, configobj.Section):
 			self.nameEdit.Value = self.definition.name

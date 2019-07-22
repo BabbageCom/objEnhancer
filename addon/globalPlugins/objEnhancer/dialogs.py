@@ -15,6 +15,7 @@ from .definitionFileHandler import getDefinitionObjFromAppName, validateDefiniti
 import NVDAObjects
 from copy import copy
 from logHandler import log
+from ast import literal_eval
 addonHandler.initTranslation()
 
 # Used to ensure that event handlers call Skip(). Not calling skip can cause focus problems for controls. More
@@ -154,13 +155,16 @@ class EditInputEntryDialog(wx.Dialog):
 		self.CentreOnScreen()
 
 	def getItemTextForValuesList(self, item, column):
-		return self.values[item]
+		return str(self.values[item])
 
 	def onItemEdited(self):
 		index = self.valuesList.GetFirstSelected()
 		# Update the entry the user was just editing.
 		entry = self.values
-		val = self.valueEdit.Value
+		try:
+			val = literal_eval(self.valueEdit.Value)
+		except:
+			val = self.valueEdit.Value
 		entry[index] = val
 
 	def onAddClick(self):
@@ -191,7 +195,7 @@ class EditInputEntryDialog(wx.Dialog):
 
 	def onValuesListItemFocused(self, evt):
 		index = evt.Index
-		self.valueEdit.Value = self.values[index]
+		self.valueEdit.Value = str(self.values[index])
 		self.removeButton.Enable()
 
 class InputPanel(wx.Panel):
@@ -243,7 +247,7 @@ class InputPanel(wx.Panel):
 		if column == 0:
 			return entry[column]
 		if column == 1:
-			return ", ".join(entry[column])
+			return ", ".join(str(x) for x in entry[column])
 		else:
 			raise ValueError("Unknown column: %d" % column)
 
@@ -266,7 +270,10 @@ class InputPanel(wx.Panel):
 			newAttr = entryDialog.attributeEdit.Value
 			if not newAttr:
 				return
-			newValue = entryDialog.valueEdit.Value
+			try:
+				newValue = literal_eval(entryDialog.valueEdit.Value)
+			except:
+				newValue = entryDialog.valueEdit.Value
 		for index, (attr, val) in enumerate(self.input):
 			if newAttr == attr:
 				# Translators: An error reported when adding an attribute that is already present.

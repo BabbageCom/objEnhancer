@@ -11,8 +11,10 @@ import configobj
 import controlTypes
 import addonHandler
 from .definitionEvaluator import ObjEnhancerOverlay
+from .definitionFileHandler import getDefinitionObjFromAppName, validateDefinitionObj
 import NVDAObjects
 from copy import copy
+from logHandler import log
 addonHandler.initTranslation()
 
 # Used to ensure that event handlers call Skip(). Not calling skip can cause focus problems for controls. More
@@ -52,8 +54,9 @@ class AddInputEntryDialog(wx.Dialog):
 			if attr.startswith("_"):
 				continue
 			try:
-				val = getattr(obj, attr, None)
+				val = getattr(obj, attr)
 			except:
+				log.exception()
 				continue
 			if callable(val) or val is None:
 				continue
@@ -494,7 +497,7 @@ class OptionsPanel(wx.Panel):
 
 class SingleDefinitionDialog(gui.SettingsDialog):
 
-	def __init__(self,parent, obj=None):
+	def __init__(self,parent, obj, moduleDefinitions):
 		if not obj:
 			raise ValueError("obj must be supplied")
 		elif obj and not isinstance(obj,NVDAObjects.NVDAObject):
@@ -503,11 +506,11 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 		if isinstance(definition, configobj.Section):
 			self.title=_("Editing definition (%s)") % definition.name
 			assert isinstance(obj, ObjEnhancerOverlay)
-			obj = super(ObjEnhancerOverlay, obj)
 		else:
 			self.title=_("New definition")
 		self.definition=definition
 		self.obj=obj
+		self.moduleDefinitions = moduleDefinitions
 		super(SingleDefinitionDialog,self).__init__(parent)
 
 	def makeSettings(self, settingsSizer):
@@ -525,7 +528,35 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 		if self.definition.get('output') is None:
 			self.definition['output']={}
 		self.outputPanel=OutputPanel(parent=self,definition=self.definition,obj=self.obj)
+		if self.definition.get('options') is None:
+			self.definition['options']={}
 		settingsSizerHelper.addItem(self.outputPanel)
 
 	def postInit(self):
 		self.nameEdit.SetFocus()
+
+	def onOk(self, evt):
+		try:
+			name = self.nameEdit.Value
+			if self.moduleDefinitions is not None:
+				parent = self.moduleDefinitions
+			else:
+				appName = self.obj.appModule.appModuleName
+				if name=="appModuleHandler":
+					appName = appModule.appName
+				parent = getDefinitionObjFromAppName(appName, create=True)
+			self.definition["input"] = dict(self.inputPanel.input)
+			self.definition["functions"] = dict(self.inputPanel.functions)
+			self.definition["output"] = dict(self.outputPanel.output)
+			#self.definition[options] = dict(self.options)
+			if isinstance(self.definition, configobj.Section):
+				# This is an existing definition
+				if self.definition.name != name:
+					parent.rename(self.definition.name, name)
+			else: # New definition
+				parent[name] = self.definition
+			validateDefinitionObj(parent)
+			parent.write()
+		finally:
+			super().onOk(evt)
+	

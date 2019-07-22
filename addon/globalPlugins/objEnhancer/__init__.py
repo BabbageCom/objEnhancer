@@ -11,7 +11,6 @@ from . import definitionFileHandler
 from configobj import ConfigObj
 import os
 from logHandler import log
-from configobj.validate import Validator
 import api
 from . import definitionEvaluator
 from copy import deepcopy
@@ -24,6 +23,7 @@ import wx
 from scriptHandler import script
 from .utils import bitmapHash
 import ui
+import weakref
 #We need to initialize translation and localization support:
 addonHandler.initTranslation()
 
@@ -33,20 +33,21 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def __init__(self):
 		super(GlobalPlugin, self).__init__()
 		# Create a definitions dictionary
-		self.definitions={}
+		self.definitions = {}
 		# populate the definitions dictionary
 		self.loadDefinitions()
 
 	def loadDefinition(self,appName, fileName=None, create=False):
 		if appName in self.definitions:
 			self.definitions[appName].reload()
-			log.debug("Obj Enhancer definition file for {app} reloaded".format(app=appName))
+			definitionFileHandler.validateDefinitionObj(self.definitions[appName])
+			log.debug(f"Obj Enhancer definition file for {appName} reloaded")
 		elif fileName:
-			self.definitions[appName]=definitionFileHandler.getDefinitionOBjFromDefinitionFile(fileName,create)
-			log.debug("Obj Enhancer definition file for {app} loaded from specified path {path}".format(app=appName,path=fileName))
+			self.definitions[appName]=definitionFileHandler.getDefinitionObjFromDefinitionFile(fileName,create)
+			log.debug(f"Obj Enhancer definition file for {appName} loaded from specified path {fileName}")
 		else:
-			self.definitions[appName]=definitionFileHandler.getDefinitionOBjFromAppName(appName,create)
-			log.debug("Obj Enhancer definition file for {app} loaded".format(app=appName))
+			self.definitions[appName]=definitionFileHandler.getDefinitionObjFromAppName(appName,create)
+			log.debug(f"Obj Enhancer definition file for {appName} loaded")
 
 	def unloadDefinition(self,appName, obj=None, delete=False):
 		defObj=obj or self.definitions.get(appName,None)
@@ -74,13 +75,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self.unloadDefinitions()
 		super(GlobalPlugin,self).terminate()
 
-	def getDefinitionsForAppModule(self,appModule):
+	def getDefinitionsForAppModule(self,appModule, create=False):
 		if not isinstance(appModule,appModuleHandler.AppModule):
 			raise ValueError("Invalid appModule specified")
 		name=appModule.appModuleName
 		if name=="appModuleHandler":
-			name=appModule.appName.encode('mbcs')
-		# This will return None if no definitions available. Note that an empty dictionary will evaluate to False as well
+			name=appModule.appName
+		if create:
+			self.loadDefinition(name, create=create)
 		return self.definitions.get(name)
 
 	def chooseNVDAObjectOverlayClasses(self,obj,clsList):
@@ -111,7 +113,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		wx.CallAfter(
 			gui.mainFrame._popupSettingsDialog,
 			dialogs.SingleDefinitionDialog,
-			obj=obj
+			obj=obj,
+			moduleDefinitions=self.getDefinitionsForAppModule(obj.appModule, create=True)
 		)
 
 	@script(

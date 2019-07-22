@@ -47,7 +47,7 @@ def availableDefinitionFiles():
 	for fileName in os.listdir(getDefinitionFileDir()):
 		if not fileName.endswith(u'.objdef.ini'):
 			continue	
-		appName=fileName.rsplit('.',2)[0].encode('mbcs')
+		appName=fileName.rsplit('.',2)[0]
 		yield (appName,os.path.abspath(os.path.join(definitionFilePath,fileName)))
 
 def getDefinitionFileFromAppName(appName,errorNotFound=False):
@@ -56,21 +56,7 @@ def getDefinitionFileFromAppName(appName,errorNotFound=False):
 		raise IOError("{path} does not exist".format(path=filePath))
 	return filePath
 
-def getDefinitionOBjFromDefinitionFile(definitionFile,create=True):
-	# configObj objects are created even when the file doesn't exist
-	if not os.path.isabs(definitionFile):
-		raise ValueError("Absolute path required")
-	obj=ConfigObj(
-		infile=definitionFile,
-		raise_errors=True,
-		create_empty=create,
-		file_error=not create,
-		indent_type="\t",
-		encoding="UTF-8",
-		interpolation=False,
-		unrepr=True,
-		configspec=defFileSpec
-	)
+def validateDefinitionObj(obj):
 	obj.newlines = "\r\n"
 	val = Validator()
 	res = obj.validate(val, preserve_errors=True)
@@ -86,7 +72,24 @@ def getDefinitionOBjFromDefinitionFile(definitionFile,create=True):
 		errors.append(section_string + ' = ' + error.message)
 	if errors:
 		raise ValidateError("Errors in %s: %s" % (definitionFile, "; ".join(errors)))
+
+def getDefinitionObjFromDefinitionFile(definitionFile,create=True):
+	# configObj objects are created even when the file doesn't exist
+	if not os.path.isabs(definitionFile):
+		raise ValueError("Absolute path required")
+	obj=ConfigObj(
+		infile=definitionFile,
+		raise_errors=True,
+		create_empty=create,
+		file_error=not create,
+		indent_type="\t",
+		encoding="UTF-8",
+		interpolation=False,
+		unrepr=True,
+		configspec=defFileSpec
+	)
+	validateDefinitionObj(obj)
 	return obj
 
-def getDefinitionOBjFromAppName(appName,create=True):
-	return getDefinitionOBjFromDefinitionFile(getDefinitionFileFromAppName(appName,errorNotFound=not create),create)
+def getDefinitionObjFromAppName(appName,create=True):
+	return getDefinitionObjFromDefinitionFile(getDefinitionFileFromAppName(appName,errorNotFound=not create),create)

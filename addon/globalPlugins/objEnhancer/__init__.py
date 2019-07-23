@@ -37,11 +37,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		# populate the definitions dictionary
 		self.loadDefinitions()
 
-	def loadDefinition(self,appName, fileName=None, create=False):
+	def loadDefinition(self,appName, fileName=None, reload=False, create=False):
 		if appName in self.definitions:
-			self.definitions[appName].reload()
-			definitionFileHandler.validateDefinitionObj(self.definitions[appName])
-			log.debug(f"Obj Enhancer definition file for {appName} reloaded")
+			if reload:
+				self.definitions[appName].reload()
+				definitionFileHandler.validateDefinitionObj(self.definitions[appName])
+				log.debug(f"Obj Enhancer definition file for {appName} reloaded")
+			else:
+				log.debug(f"Obj Enhancer definition file for {appName} already loaded")
 		elif fileName:
 			self.definitions[appName]=definitionFileHandler.getDefinitionObjFromDefinitionFile(fileName,create)
 			log.debug(f"Obj Enhancer definition file for {appName} loaded from specified path {fileName}")
@@ -61,10 +64,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	def loadDefinitions(self):
 		for a,f in definitionFileHandler.availableDefinitionFiles():
-			self.loadDefinition(a,f)
+			self.loadDefinition(a,f, reload=True)
 		# The global file should always be there
 		if not 'global' in self.definitions:
-			self.loadDefinition('global',create=True)
+			self.loadDefinition('global', create=True)
 
 	def unloadDefinitions(self):
 		# We do not use items here as the dictionary changes in the for loop
@@ -81,23 +84,26 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		name=appModule.appModuleName
 		if name=="appModuleHandler":
 			name=appModule.appName
-		if create:
+		definitions = self.definitions.get(name)
+		if definitions is None and create:
 			self.loadDefinition(name, create=create)
-		return self.definitions.get(name)
+			definitions = self.definitions.get(name)
+		return definitions
 
 	def chooseNVDAObjectOverlayClasses(self,obj,clsList):
+		defs = []
 		appDefs=self.getDefinitionsForAppModule(obj.appModule)
 		globalDefs=self.definitions['global']
 		if appDefs:
-			relevantDefs=deepcopy(appDefs)
-			relevantDefs.merge(globalDefs)
-		else:
-			relevantDefs=globalDefs
-		if not relevantDefs:
-			return
-		definition = definitionEvaluator.findMatchingDefinitionsForObj(obj,relevantDefs)
-		if definition:
-			clsList.insert(0, definitionEvaluator.getOverlayClassForDefinition(definition))
+			defs.append(appDefs)
+		if globalDefs:
+			defs.append(globalDefs)
+		objCache = {}
+		for relevantDefs in defs:
+			definition = definitionEvaluator.findMatchingDefinitionsForObj(obj,relevantDefs, objCache)
+			if definition:
+				clsList.insert(0, definitionEvaluator.getOverlayClassForDefinition(definition))
+				break
 
 	@script(
 		description=_("Customize the properties of the navigator object"),

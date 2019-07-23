@@ -84,10 +84,9 @@ def getOverlayClassForDefinition(definition):
 		output
 	)
 
-def findMatchingDefinitionsForObj(obj,definitions):
+def findMatchingDefinitionsForObj(obj,definitions, objCache):
 	if not isinstance(definitions,configobj.ConfigObj):
 		raise ValueError("Invalid spesification provided: %s"%definitions)
-	objCache = {}
 	for name, definition in definitions.items():
 		if definition['isAbstract']:
 			continue
@@ -96,7 +95,7 @@ def findMatchingDefinitionsForObj(obj,definitions):
 			try:
 				parentDef = definitions[parent]
 			except KeyError:
-				log.error("Definition %s refered to unknown parent %s" % (name, parent))
+				log.error(f"Definition {name} refered to unknown parent {parent}")
 				continue
 			if not evaluateObjAttrs(obj, parentDef, objCache):
 				return None

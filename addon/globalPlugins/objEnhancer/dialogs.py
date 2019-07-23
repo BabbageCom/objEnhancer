@@ -545,21 +545,18 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 	def onOk(self, evt):
 		try:
 			name = self.nameEdit.Value
-			if self.moduleDefinitions is not None:
-				parent = self.moduleDefinitions
-			else:
-				appName = self.obj.appModule.appModuleName
-				if name=="appModuleHandler":
-					appName = appModule.appName
-				parent = getDefinitionObjFromAppName(appName, create=True)
+			parent = self.moduleDefinitions
 			self.definition["input"] = dict(self.inputPanel.input)
 			self.definition["functions"] = dict(self.inputPanel.functions)
 			self.definition["output"] = dict(self.outputPanel.output)
 			#self.definition[options] = dict(self.options)
 			if isinstance(self.definition, configobj.Section):
+				assert parent is self.definition.parent
 				# This is an existing definition
 				if self.definition.name != name:
 					parent.rename(self.definition.name, name)
+					# A bug in configobj doesn't update self.definition.name
+					self.definition.name = name
 			else: # New definition
 				parent[name] = self.definition
 			validateDefinitionObj(parent)

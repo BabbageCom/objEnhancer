@@ -1,9 +1,9 @@
 # Object Enhancer
 
-#Copyright (C) 2017 Babbage B.V.
+# Copyright (C) 2017 Babbage B.V.
 
-#This file is covered by the GNU General Public License.
-#See the file COPYING for more details.
+# This file is covered by the GNU General Public License.
+# See the file COPYING for more details.
 
 import globalVars
 import os
@@ -11,9 +11,10 @@ from logHandler import log
 from configobj import ConfigObj, flatten_errors
 from io import StringIO
 from configobj.validate import Validator, ValidateError
-import controlTypes
 
-defFileSpec=ConfigObj(StringIO(u"""[__many__]
+
+defFileSpec = ConfigObj(StringIO(
+	u"""[__many__]
 	parent = string(default="")
 	isAbstract = boolean(default=False)
 	[[input]]
@@ -22,7 +23,8 @@ defFileSpec=ConfigObj(StringIO(u"""[__many__]
 	[[options]]
 		absoluteLocations = boolean(default=True)
 		handleDefinitionErrors = option("ignore", "break", "raise", default="break")
-	[[output]]"""),
+	[[output]]"""
+	),
 	indent_type="\t",
 	encoding="UTF-8",
 	interpolation=False,
@@ -31,30 +33,37 @@ defFileSpec=ConfigObj(StringIO(u"""[__many__]
 )
 defFileSpec.newlines = "\r\n"
 
+
 def getDefinitionFileDir():
 	configPath = globalVars.appArgs.configPath
-	definitionFilePath=os.path.join(configPath,'objEnhancer')
+	definitionFilePath = os.path.join(configPath, 'objEnhancer')
 	if not os.path.isdir(definitionFilePath):
 		try:
 			os.makedirs(definitionFilePath)
-		except Exception as e:
+		except Exception:
 			log.exception("Error creating definition file folder")
 			return None
 	return definitionFilePath
 
+
 def availableDefinitionFiles():
-	definitionFilePath=getDefinitionFileDir()
+	definitionFilePath = getDefinitionFileDir()
 	for fileName in os.listdir(getDefinitionFileDir()):
 		if not fileName.endswith(u'.objdef.ini'):
-			continue	
-		appName=fileName.rsplit('.',2)[0]
-		yield (appName,os.path.abspath(os.path.join(definitionFilePath,fileName)))
+			continue
+		appName = fileName.rsplit('.', 2)[0]
+		yield (appName, os.path.abspath(os.path.join(definitionFilePath, fileName)))
 
-def getDefinitionFileFromAppName(appName,errorNotFound=False):
-	filePath=os.path.abspath(os.path.join(getDefinitionFileDir(),"{name}.objdef.ini".format(name=appName.replace(".","_"))))
+
+def getDefinitionFileFromAppName(appName, errorNotFound=False):
+	filePath = os.path.abspath(os.path.join(
+		getDefinitionFileDir(),
+		f'{appName.replace(".","_")}.objdef.ini')
+		)
 	if errorNotFound and not os.path.isfile(filePath):
 		raise IOError("{path} does not exist".format(path=filePath))
 	return filePath
+
 
 def validateDefinitionObj(obj):
 	obj.newlines = "\r\n"
@@ -67,17 +76,19 @@ def validateDefinitionObj(obj):
 		else:
 			section_list.append('[missing section]')
 		section_string = ', '.join(section_list)
-		if error == False:
+		if error is False:
 			error = 'Missing value or section.'
 		errors.append(section_string + ' = ' + error.message)
 	if errors:
-		raise ValidateError("Errors in %s: %s" % (definitionFile, "; ".join(errors)))
+		errors = "; ".join(errors)
+		raise ValidateError(f"Errors in {obj}: {errors}")
 
-def getDefinitionObjFromDefinitionFile(definitionFile,create=True):
+
+def getDefinitionObjFromDefinitionFile(definitionFile, create=True):
 	# configObj objects are created even when the file doesn't exist
 	if not os.path.isabs(definitionFile):
 		raise ValueError("Absolute path required")
-	obj=ConfigObj(
+	obj = ConfigObj(
 		infile=definitionFile,
 		raise_errors=True,
 		create_empty=create,
@@ -87,9 +98,13 @@ def getDefinitionObjFromDefinitionFile(definitionFile,create=True):
 		interpolation=False,
 		unrepr=True,
 		configspec=defFileSpec
-	)
+		)
 	validateDefinitionObj(obj)
 	return obj
 
-def getDefinitionObjFromAppName(appName,create=True):
-	return getDefinitionObjFromDefinitionFile(getDefinitionFileFromAppName(appName,errorNotFound=not create),create)
+
+def getDefinitionObjFromAppName(appName, create=True):
+	return getDefinitionObjFromDefinitionFile(
+		getDefinitionFileFromAppName(appName, errorNotFound=not create),
+		create
+		)

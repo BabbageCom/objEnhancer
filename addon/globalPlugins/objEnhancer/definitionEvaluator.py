@@ -1,29 +1,28 @@
 # Object Enhancer
 
-#Copyright (C) 2017 Babbage B.V.
+# Copyright (C) 2017 Babbage B.V.
 
-#This file is covered by the GNU General Public License.
-#See the file COPYING for more details.
+# This file is covered by the GNU General Public License.
+# See the file COPYING for more details.
 
 import configobj
-from baseObject import AutoPropertyObject
 from NVDAObjects import NVDAObject
 from logHandler import log
 from operator import sub, attrgetter
-import itertools
 from locationHelper import RectLTWH
 from . import utils
 from types import MethodType
 from configobj import Section
 
-def evaluateObjAttrs(obj, definition, cache):
-	if not isinstance(obj,NVDAObject):
-		raise ValueError("Invalid NVDAObject definitionified: %s"%obj)
-	input=definition.get('input',{})
+
+def evaluateObjectAttributes(obj, definition, cache):
+	if not isinstance(obj, NVDAObject):
+		raise ValueError(f"Invalid NVDAObject specified: {obj!r}")
+	input = definition.get('input', {})
 	if not (isinstance(definition, Section) and input):
-		raise ValueError("Invalid definition spesification provided: %s"%definition)
-	options=definition.get('options',{})
-	functions=definition.get('functions',{})
+		raise ValueError(f"Invalid definition spesification provided: {definition}")
+	options = definition.get('options', {})
+	functions = definition.get('functions', {})
 	for attr, possibleVals in input.items():
 		params = functions.get(attr, {})
 		tupleParams = tuple(params.items())
@@ -42,12 +41,12 @@ def evaluateObjAttrs(obj, definition, cache):
 					raise TypeError("Function definition missmatch")
 				elif callable(val):
 					val = val(**params)
-			except:
+			except Exception:
 				handleErrors = options['handleDefinitionErrors']
 				if handleErrors == "raise":
 					raise
 				else:
-					log.exception("Error while handling objEnhancer definition %r" % definition)
+					log.exception(f"Error while handling objEnhancer definition {definition}")
 					if handleErrors == "break":
 						break
 					elif handleErrors == "ignore":
@@ -55,9 +54,9 @@ def evaluateObjAttrs(obj, definition, cache):
 			cache[(attr, tupleParams)] = val
 		if val in possibleVals:
 			continue
-		elif not options.get('absoluteLocations',True) and attr=='location':
-			for val in possibleVals:
-				relativeLocation = RectLTWH(*map(sub,expectedVal,val))
+		elif not options.get('absoluteLocations', True) and attr == 'location':
+			for expectedVal in possibleVals:
+				relativeLocation = RectLTWH(*map(sub, expectedVal, val))
 				if relativeLocation.topLeft == relativeLocation.bottomRight:
 					break
 			else:
@@ -68,25 +67,28 @@ def evaluateObjAttrs(obj, definition, cache):
 		return True
 	return False
 
+
 class ObjEnhancerOverlay(NVDAObject):
 	pass
 
+
 def getOverlayClassForDefinition(definition):
-	name = definition.name[0].upper()+definition.name[1:]
-	output=definition.get('output',{})
+	name = definition.name[0].upper() + definition.name[1:]
+	output = definition.get('output', {})
 	if not (isinstance(definition, Section) and output):
-		raise ValueError("Invalid definition specification provided: %s"%definition)
+		raise ValueError(f"Invalid definition specification provided: {definition}")
 	output = output.dict()
 	output['_objEnhancerDefinition'] = definition
 	return type(
 		"{}ObjEnhancerOverlay".format(name),
 		(ObjEnhancerOverlay,),
 		output
-	)
+		)
 
-def findMatchingDefinitionsForObj(obj,definitions, objCache):
-	if not isinstance(definitions,configobj.ConfigObj):
-		raise ValueError("Invalid spesification provided: %s"%definitions)
+
+def findMatchingDefinitionsForObj(obj, definitions, objCache):
+	if not isinstance(definitions, configobj.ConfigObj):
+		raise ValueError(f"Invalid spesification provided: {definitions}")
 	for name, definition in definitions.items():
 		if definition['isAbstract']:
 			continue
@@ -97,8 +99,8 @@ def findMatchingDefinitionsForObj(obj,definitions, objCache):
 			except KeyError:
 				log.error(f"Definition {name} refered to unknown parent {parent}")
 				continue
-			if not evaluateObjAttrs(obj, parentDef, objCache):
+			if not evaluateObjectAttributes(obj, parentDef, objCache):
 				return None
-		if evaluateObjAttrs(obj, definition, objCache):
+		if evaluateObjectAttributes(obj, definition, objCache):
 			return definition
 	return None

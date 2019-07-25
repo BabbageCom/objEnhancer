@@ -1,17 +1,16 @@
 # Object Enhancer
 
-#Copyright (C) 2017-2019 Babbage B.V.
+# Copyright (C) 2017-2019 Babbage B.V.
 
-#This file is covered by the GNU General Public License.
-#See the file COPYING for more details.
+# This file is covered by the GNU General Public License.
+# See the file COPYING for more details.
 
 import wx
 import gui
 import configobj
-import controlTypes
 import addonHandler
 from .definitionEvaluator import ObjEnhancerOverlay
-from .definitionFileHandler import getDefinitionObjFromAppName, validateDefinitionObj
+from .definitionFileHandler import validateDefinitionObj
 import NVDAObjects
 from copy import copy
 from logHandler import log
@@ -19,15 +18,20 @@ from ast import literal_eval
 addonHandler.initTranslation()
 
 # Used to ensure that event handlers call Skip(). Not calling skip can cause focus problems for controls. More
-# generally the advice on the wx documentation is: "In general, it is recommended to skip all non-command events
-# to allow the default handling to take place. The command events are, however, normally not skipped as usually
+# generally the advice on the wx documentation is:
+# "In general, it is recommended to skip all non-command events
+# to allow the default handling to take place. The command events are, however,
+# normally not skipped as usually
 # a single command such as a button click or menu item selection must only be processed by one handler."
+
+
 def skipEventAndCall(handler):
 	def wrapWithEventSkip(event):
 		if event:
 			event.Skip()
 		return handler()
 	return wrapWithEventSkip
+
 
 outputAttributes = [
 	"description",
@@ -45,6 +49,7 @@ inputAttributes = [
 	"windowControlID"
 ]
 
+
 class AddInputEntryDialog(wx.Dialog):
 
 	@classmethod
@@ -56,7 +61,7 @@ class AddInputEntryDialog(wx.Dialog):
 				continue
 			try:
 				val = getattr(obj, attr)
-			except:
+			except Exception:
 				log.exception()
 				continue
 			if callable(val) or val is None:
@@ -68,7 +73,7 @@ class AddInputEntryDialog(wx.Dialog):
 		self.obj = obj
 		self.objectVars = list(self.getObjectVars(obj)) if obj else []
 
-		mainSizer=wx.BoxSizer(wx.VERTICAL)
+		mainSizer = wx.BoxSizer(wx.VERTICAL)
 		sHelper = gui.guiHelper.BoxSizerHelper(self, orientation=wx.VERTICAL)
 
 		varsText = _("&Relevant object attributes:")
@@ -117,13 +122,14 @@ class AddInputEntryDialog(wx.Dialog):
 			value = str(value)
 		self.valueEdit.Value = value
 
+
 class EditInputEntryDialog(wx.Dialog):
 
 	def __init__(self, parent, title, values):
 		super().__init__(parent, title=title)
 		self.values = copy(values)
 
-		mainSizer=wx.BoxSizer(wx.VERTICAL)
+		mainSizer = wx.BoxSizer(wx.VERTICAL)
 		sHelper = gui.guiHelper.BoxSizerHelper(self, orientation=wx.VERTICAL)
 
 		valuesText = f"&{title}"
@@ -169,7 +175,7 @@ class EditInputEntryDialog(wx.Dialog):
 		entry = self.values
 		try:
 			val = literal_eval(self.valueEdit.Value)
-		except:
+		except Exception:
 			val = self.valueEdit.Value
 		entry[index] = val
 
@@ -204,11 +210,12 @@ class EditInputEntryDialog(wx.Dialog):
 		self.valueEdit.Value = str(self.values[index])
 		self.removeButton.Enable()
 
+
 class InputPanel(wx.Panel):
 
 	def __init__(self, parent, definition, obj=None):
-		if not isinstance(definition,dict):
-			raise ValueError("Invalid definition provided: %s"%definition)
+		if not isinstance(definition, dict):
+			raise ValueError(f"Invalid definition provided: {definition}")
 		self.definition = definition
 		self.input = list(definition['input'].items())
 		self.functions = list(definition['functions'].items())
@@ -278,12 +285,13 @@ class InputPanel(wx.Panel):
 				return
 			try:
 				newValue = literal_eval(entryDialog.valueEdit.Value)
-			except:
+			except Exception:
 				newValue = entryDialog.valueEdit.Value
 		for index, (attr, val) in enumerate(self.input):
 			if newAttr == attr:
 				# Translators: An error reported when adding an attribute that is already present.
-				gui.messageBox(_(f'Attribute {newAttr!r} is already added.'),
+				gui.messageBox(
+					_(f'Attribute {newAttr!r} is already added.'),
 					_("Error"), wx.OK | wx.ICON_ERROR)
 				self.inputList.Select(index)
 				self.inputList.Focus(index)
@@ -311,7 +319,8 @@ class InputPanel(wx.Panel):
 			newValues = entryDialog.values
 			if not newValues:
 				# Translators: An error reported when adding an attribute that is already present.
-				gui.messageBox(_(f'NO values specified.'),
+				gui.messageBox(
+					_(f'NO values specified.'),
 					_("Error"), wx.OK | wx.ICON_ERROR)
 			values[:] = newValues
 
@@ -333,11 +342,12 @@ class InputPanel(wx.Panel):
 			self.inputList.sendListItemFocusedEvent(index)
 		self.inputList.SetFocus()
 
+
 class AddOutputEntryDialog(wx.Dialog):
 
 	def __init__(self, parent, title, attributes):
 		super().__init__(parent, title=title)
-		mainSizer=wx.BoxSizer(wx.VERTICAL)
+		mainSizer = wx.BoxSizer(wx.VERTICAL)
 		sHelper = gui.guiHelper.BoxSizerHelper(self, orientation=wx.VERTICAL)
 
 		attributeSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -362,11 +372,12 @@ class AddOutputEntryDialog(wx.Dialog):
 		self.attributeCombo.SetFocus()
 		self.CentreOnScreen()
 
+
 class OutputPanel(wx.Panel):
 
 	def __init__(self, parent, definition, obj=None):
-		if not isinstance(definition,dict):
-			raise ValueError("Invalid definition provided: %s"%definition)
+		if not isinstance(definition, dict):
+			raise ValueError(f"Invalid definition provided: {definition}")
 		self.output = list(definition['output'].items())
 		super().__init__(parent, id=wx.ID_ANY)
 		sizer = gui.guiHelper.BoxSizerHelper(self, orientation=wx.HORIZONTAL)
@@ -388,7 +399,11 @@ class OutputPanel(wx.Panel):
 
 		# Translators: The label for the group of controls to change an item.
 		changeItemText = _("Change output value")
-		changeItemHelper = sizer.addItem(gui.guiHelper.BoxSizerHelper(self, sizer=wx.StaticBoxSizer(wx.StaticBox(self, label=changeItemText), wx.VERTICAL)))
+		changeItemHelper = sizer.addItem(
+			gui.guiHelper.BoxSizerHelper(
+				self,
+				sizer=wx.StaticBoxSizer(wx.StaticBox(self, label=changeItemText), wx.VERTICAL)
+				))
 		attributeSizer = wx.BoxSizer(wx.HORIZONTAL)
 		# Translators: The label for the edit field to change the attribute of an item.
 		attributeText = _("Output &attribute:")
@@ -426,7 +441,6 @@ class OutputPanel(wx.Panel):
 		self.addButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.onAddClick))
 		self.removeButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.onRemoveClick))
 
-
 		self.SetSizerAndFit(sizer.sizer)
 
 	def getItemTextForList(self, item, column):
@@ -436,7 +450,6 @@ class OutputPanel(wx.Panel):
 	def onItemEdited(self):
 		if self.editingItem is not None:
 			# Update the entry the user was just editing.
-			entry = self.output[self.editingItem]
 			attribute = self.attributeCombo.Value
 			val = self.valueEdit.Value
 			self.output[self.editingItem] = (attribute, val)
@@ -468,7 +481,8 @@ class OutputPanel(wx.Panel):
 		for index, (attr, val) in enumerate(self.output):
 			if newAttr == attr:
 				# Translators: An error reported when adding an attribute that is already present.
-				gui.messageBox(_(f'Attribute {newAttr!r} is already present.'),
+				gui.messageBox(
+					_(f'Attribute {newAttr!r} is already present.'),
 					_("Error"), wx.OK | wx.ICON_ERROR)
 				self.outputList.Select(index)
 				self.outputList.Focus(index)
@@ -502,35 +516,37 @@ class OutputPanel(wx.Panel):
 			self.outputList.sendListItemFocusedEvent(index)
 		self.outputList.SetFocus()
 
+
 class OptionsPanel(wx.Panel):
 
-	def __init__(self, options={}, parent=None):
-		if not isinstance(options,dict):
-			raise ValueError("Invalid definition provided: %s"%definition)
+	def __init__(self, options, parent=None):
+		if not isinstance(options, dict):
+			raise ValueError(f"Invalid options provided: {options}")
+
 
 class SingleDefinitionDialog(gui.SettingsDialog):
 
-	def __init__(self,parent, moduleDefinitions, definition=None, obj=None, multiInstanceAllowed=False):
+	def __init__(self, parent, moduleDefinitions, definition=None, obj=None, multiInstanceAllowed=False):
 		if definition is None and obj is None:
 			raise ValueError("Either obj or definition is required")
-		elif obj and not isinstance(obj,NVDAObjects.NVDAObject):
+		elif obj and not isinstance(obj, NVDAObjects.NVDAObject):
 			raise ValueError("Invalid object provided")
 		if not definition:
 			definition = getattr(obj, "_objEnhancerDefinition", {})
 		if isinstance(definition, configobj.Section):
-			self.title=_("Editing definition (%s)") % definition.name
+			self.title = _("Editing definition (%s)") % definition.name
 			if obj:
 				assert isinstance(obj, ObjEnhancerOverlay)
 		else:
-			self.title=_("New definition")
-		self.definition=definition
-		self.obj=obj
+			self.title = _("New definition")
+		self.definition = definition
+		self.obj = obj
 		self.moduleDefinitions = moduleDefinitions
-		super(SingleDefinitionDialog,self).__init__(parent, multiInstanceAllowed=multiInstanceAllowed)
+		super(SingleDefinitionDialog, self).__init__(parent, multiInstanceAllowed=multiInstanceAllowed)
 
 	def makeSettings(self, settingsSizer):
 		settingsSizerHelper = gui.guiHelper.BoxSizerHelper(self, sizer=settingsSizer)
-		nameText=_("Identifying name:")
+		nameText = _("Identifying name:")
 		self.nameEdit = settingsSizerHelper.addLabeledControl(nameText, wx.TextCtrl)
 		if isinstance(self.definition, configobj.Section):
 			self.nameEdit.Value = self.definition.name
@@ -538,13 +554,13 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 			self.definition['input'] = {}
 		if self.definition.get('functions') is None:
 			self.definition['functions'] = {}
-		self.inputPanel = InputPanel(parent=self,definition=self.definition,obj=self.obj)
+		self.inputPanel = InputPanel(parent=self, definition=self.definition, obj=self.obj)
 		settingsSizerHelper.addItem(self.inputPanel)
 		if self.definition.get('output') is None:
-			self.definition['output']={}
-		self.outputPanel=OutputPanel(parent=self,definition=self.definition,obj=self.obj)
+			self.definition['output'] = {}
+		self.outputPanel = OutputPanel(parent=self, definition=self.definition, obj=self.obj)
 		if self.definition.get('options') is None:
-			self.definition['options']={}
+			self.definition['options'] = {}
 		settingsSizerHelper.addItem(self.outputPanel)
 
 	def postInit(self):
@@ -557,7 +573,7 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 			self.definition["input"] = dict(self.inputPanel.input)
 			self.definition["functions"] = dict(self.inputPanel.functions)
 			self.definition["output"] = dict(self.outputPanel.output)
-			#self.definition[options] = dict(self.options)
+			# self.definition[options] = dict(self.options)
 			if isinstance(self.definition, configobj.Section):
 				assert parent is self.definition.parent
 				# This is an existing definition
@@ -565,7 +581,7 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 					parent.rename(self.definition.name, name)
 					# A bug in configobj doesn't update self.definition.name
 					self.definition.name = name
-			else: # New definition
+			else:  # New definition
 				parent[name] = self.definition
 			validateDefinitionObj(parent)
 			if not isinstance(self.Parent, DefinitionsPanel):
@@ -581,6 +597,7 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 				validateDefinitionObj(parent)
 		finally:
 			super().onCancel(evt)
+
 
 class DefinitionsPanel(gui.settingsDialogs.SettingsPanel):
 
@@ -635,7 +652,6 @@ class DefinitionsPanel(gui.settingsDialogs.SettingsPanel):
 
 	def onListItemFocused(self, evt):
 		# Update the editing controls to reflect the newly selected criterium.
-		index = evt.Index
 		self.editButton.Enable()
 		self.removeButton.Enable()
 		evt.Skip()
@@ -682,6 +698,7 @@ class DefinitionsPanel(gui.settingsDialogs.SettingsPanel):
 			self.definitionsList.sendListItemFocusedEvent(index)
 		self.definitionsList.SetFocus()
 
+
 class DefinitionsDialog(gui.settingsDialogs.MultiCategorySettingsDialog):
 	title = _("Object Enhancer Definitions")
 
@@ -697,7 +714,7 @@ class DefinitionsDialog(gui.settingsDialogs.MultiCategorySettingsDialog):
 		try:
 			staticText = settingsSizer.Children[0].Sizer.Children[0].Window
 			staticText.Label = _("&Applications:")
-		except:
+		except Exception:
 			pass
 
 	@property

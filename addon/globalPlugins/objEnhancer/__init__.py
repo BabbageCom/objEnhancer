@@ -63,11 +63,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			log.debug("Obj Enhancer definition file for {app} unloaded and deleted".format(app=appName))
 
 	def loadDefinitions(self):
-		for a,f in definitionFileHandler.availableDefinitionFiles():
-			self.loadDefinition(a,f, reload=True)
 		# The global file should always be there
 		if not 'global' in self.definitions:
 			self.loadDefinition('global', create=True)
+		for a,f in definitionFileHandler.availableDefinitionFiles():
+			self.loadDefinition(a,f, reload=True)
 
 	def unloadDefinitions(self):
 		# We do not use items here as the dictionary changes in the for loop
@@ -122,6 +122,22 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			obj=obj,
 			moduleDefinitions=self.getDefinitionsForAppModule(obj.appModule, create=True)
 		)
+
+	def openDefinitionsDialog(self, evt=None):
+		if evt:
+			evt.Skip()
+		wx.CallAfter(
+			gui.mainFrame._popupSettingsDialog,
+			dialogs.DefinitionsDialog,
+			multipleDefinitionsDict=self.definitions
+		)
+
+	@script(
+		description=_("Open the Object Enhancer definitions dialogs"),
+		gesture="kb:NVDA+control+shift+tab"
+	)
+	def script_openDefinitionsDialog(self,gesture):
+		self.openDefinitionsDialog()
 
 	@script(
 		description=_("Copies the base64 encoded SHA1 hash of the bitmap of the navigator object to the clipboard"),

@@ -1,6 +1,6 @@
 # Object Enhancer
 
-#Copyright (C) 2017 Babbage B.V.
+#Copyright (C) 2017-2019 Babbage B.V.
 
 #This file is covered by the GNU General Public License.
 #See the file COPYING for more details.
@@ -65,7 +65,8 @@ class AddInputEntryDialog(wx.Dialog):
 
 	def __init__(self, parent, title, obj):
 		super().__init__(parent, title=title)
-		self.objectVars = list(self.getObjectVars(obj))
+		self.obj = obj
+		self.objectVars = list(self.getObjectVars(obj)) if obj else []
 
 		mainSizer=wx.BoxSizer(wx.VERTICAL)
 		sHelper = gui.guiHelper.BoxSizerHelper(self, orientation=wx.VERTICAL)
@@ -83,6 +84,8 @@ class AddInputEntryDialog(wx.Dialog):
 		# Translators: The label for a column in input list used to identify an item's value.
 		self.varsList.InsertColumn(1, _("Value"))
 		self.varsList.Bind(wx.EVT_LIST_ITEM_FOCUSED, self.onVarsListItemFocused)
+		if not obj:
+			self.varsList.Disable()
 
 		attributeText = _("A&ttribute:")
 		self.attributeEdit = sHelper.addLabeledControl(attributeText, wx.TextCtrl)
@@ -95,7 +98,10 @@ class AddInputEntryDialog(wx.Dialog):
 		mainSizer.Add(sHelper.sizer, border=gui.guiHelper.BORDER_FOR_DIALOGS, flag=wx.ALL)
 		mainSizer.Fit(self)
 		self.SetSizer(mainSizer)
-		self.varsList.SetFocus()
+		if obj:
+			self.varsList.SetFocus()
+		else:
+			self.attributeEdit.SetFocus()
 		self.CentreOnScreen()
 
 	def getItemTextForVarsList(self, item, column):
@@ -246,7 +252,7 @@ class InputPanel(wx.Panel):
 		entry = self.input[item]
 		if column == 0:
 			return entry[column]
-		if column == 1:
+		elif column == 1:
 			return ", ".join(str(x) for x in entry[column])
 		else:
 			raise ValueError("Unknown column: %d" % column)
@@ -504,21 +510,23 @@ class OptionsPanel(wx.Panel):
 
 class SingleDefinitionDialog(gui.SettingsDialog):
 
-	def __init__(self,parent, obj, moduleDefinitions):
-		if not obj:
-			raise ValueError("obj must be supplied")
+	def __init__(self,parent, moduleDefinitions, definition=None, obj=None, multiInstanceAllowed=False):
+		if definition is None and obj is None:
+			raise ValueError("Either obj or definition is required")
 		elif obj and not isinstance(obj,NVDAObjects.NVDAObject):
 			raise ValueError("Invalid object provided")
-		definition = getattr(obj, "_objEnhancerDefinition", {})
+		if not definition:
+			definition = getattr(obj, "_objEnhancerDefinition", {})
 		if isinstance(definition, configobj.Section):
 			self.title=_("Editing definition (%s)") % definition.name
-			assert isinstance(obj, ObjEnhancerOverlay)
+			if obj:
+				assert isinstance(obj, ObjEnhancerOverlay)
 		else:
 			self.title=_("New definition")
 		self.definition=definition
 		self.obj=obj
 		self.moduleDefinitions = moduleDefinitions
-		super(SingleDefinitionDialog,self).__init__(parent)
+		super(SingleDefinitionDialog,self).__init__(parent, multiInstanceAllowed=multiInstanceAllowed)
 
 	def makeSettings(self, settingsSizer):
 		settingsSizerHelper = gui.guiHelper.BoxSizerHelper(self, sizer=settingsSizer)
@@ -560,7 +568,152 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 			else: # New definition
 				parent[name] = self.definition
 			validateDefinitionObj(parent)
-			parent.write()
+			if not isinstance(self.Parent, DefinitionsPanel):
+				parent.write()
 		finally:
 			super().onOk(evt)
-	
+
+	def onCancel(self, evt):
+		try:
+			parent = self.moduleDefinitions
+			if not isinstance(self.Parent, DefinitionsPanel):
+				parent.reload()
+				validateDefinitionObj(parent)
+		finally:
+			super().onCancel(evt)
+
+class DefinitionsPanel(gui.settingsDialogs.SettingsPanel):
+
+	def makeSettings(self, sizer):
+		settingsSizerHelper = gui.guiHelper.BoxSizerHelper(self, sizer=sizer)
+		definitionsText = _("&Available definitions:")
+		self.definitionsList = settingsSizerHelper.addLabeledControl(
+			definitionsText,
+			gui.nvdaControls.AutoWidthColumnListCtrl,
+			autoSizeColumn=3,
+			itemTextCallable=self.getItemTextForList,
+			style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.LC_VIRTUAL
+		)
+		self.definitionsList.ItemCount = len(self.definitions)
+		self.definitionsList.InsertColumn(0, _("Identifier"))
+		self.definitionsList.InsertColumn(1, _("Input"))
+		self.definitionsList.InsertColumn(2, _("Output"))
+		self.definitionsList.Bind(wx.EVT_LIST_ITEM_FOCUSED, self.onListItemFocused)
+
+		bHelper = settingsSizerHelper.addItem(gui.guiHelper.ButtonHelper(orientation=wx.HORIZONTAL))
+		# Translators: The label for a button to add a new entry.
+		self.addButton = bHelper.addButton(self, label=_("&Add"))
+		# Translators: The label for a button to edit a new entry.
+		self.editButton = bHelper.addButton(self, label=_("&Edit"))
+		self.editButton.Disable()
+		# Translators: The label for a button to remove an entry.
+		self.removeButton = bHelper.addButton(self, label=_("Re&move"))
+		self.removeButton.Disable()
+
+		self.addButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.onAddClick))
+		self.editButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.onEditClick))
+		self.removeButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.onRemoveClick))
+
+	def onSave(self):
+		validateDefinitionObj(self.definitions)
+		self.definitions.write()
+
+	def onDiscard(self):
+		self.definitions.reload()
+		validateDefinitionObj(self.definitions)
+
+	def getItemTextForList(self, item, column):
+		entry = list(self.definitions.values())[item]
+		if column == 0:
+			return entry.name
+		elif column == 1:
+			return "test"
+		elif column == 2:
+			return "test2"
+		else:
+			raise ValueError("Unknown column: %d" % column)
+
+	def onListItemFocused(self, evt):
+		# Update the editing controls to reflect the newly selected criterium.
+		index = evt.Index
+		self.editButton.Enable()
+		self.removeButton.Enable()
+		evt.Skip()
+
+	def onAddClick(self):
+		newEntry = SingleDefinitionDialog(self, self.definitions, definition={}, multiInstanceAllowed=True)
+		ret = newEntry.ShowModal()
+		if ret == wx.ID_OK:
+			self.Freeze()
+			# trigger a refresh of the settings
+			self._sendLayoutUpdatedEvent()
+			self.Thaw()
+
+	def onEditClick(self):
+		index = self.definitionsList.GetFirstSelected()
+		editedEntry = SingleDefinitionDialog(
+			self,
+			self.definitions,
+			definition=list(self.definitions.values())[index],
+			multiInstanceAllowed=True
+		)
+		ret = editedEntry.ShowModal()
+		if ret == wx.ID_OK:
+			self.Freeze()
+			# trigger a refresh of the settings
+			self._sendLayoutUpdatedEvent()
+			self.Thaw()
+
+	def onRemoveClick(self):
+		index = self.definitionsList.GetFirstSelected()
+		name = list(self.definitions)[index]
+		del self.definitions[name]
+		self.definitionsList.ItemCount = len(self.definitions)
+		# sometimes removing may result in an empty list.
+		if not self.definitionsList.ItemCount:
+			# disable the controls, since there are no items in the list.
+			self.editButton.Disable()
+			self.removeButton.Disable()
+		else:
+			index = min(index, self.definitionsList.ItemCount - 1)
+			self.definitionsList.Select(index)
+			self.definitionsList.Focus(index)
+			# We don't get a new focus event with the new index.
+			self.definitionsList.sendListItemFocusedEvent(index)
+		self.definitionsList.SetFocus()
+
+class DefinitionsDialog(gui.settingsDialogs.MultiCategorySettingsDialog):
+	title = _("Object Enhancer Definitions")
+
+	def __init__(self, parent, multipleDefinitionsDict, initialCategory=None):
+		self.multipleDefinitionsDict = multipleDefinitionsDict
+		self._categoryClasses = []
+		super().__init__(parent, initialCategory=initialCategory)
+
+	def makeSettings(self, settingsSizer):
+		super().makeSettings(settingsSizer)
+		# Hack, override the label for categories.
+		# This really should be an option on MultiCategorySettingsDialog.
+		try:
+			staticText = settingsSizer.Children[0].Sizer.Children[0].Window
+			staticText.Label = _("&Applications:")
+		except:
+			pass
+
+	@property
+	def categoryClasses(self):
+		if self._categoryClasses:
+			return self._categoryClasses
+		self._categoryClasses = []
+		for name, definitions in self.multipleDefinitionsDict.items():
+			self._categoryClasses.append(
+				type(
+					f"{name.capitalize()}DefinitionsPanel",
+					(DefinitionsPanel,),
+					dict(
+						title=name.capitalize(),
+						definitions=definitions
+					)
+				)
+			)
+		return self._categoryClasses

@@ -3,11 +3,10 @@ environment:
  PY_PYTHON: 3.7-32
 install:
   - py -m pip install markdown scons
-  
 
 build_script:
-  - scons
-  - scons pot
+  - c:\python37\scripts\scons
+  - c:\python37\scripts\scons pot
 
 artifacts:
   - path: '*.nvda-addon'
@@ -19,9 +18,6 @@ deploy:
   release: $(APPVEYOR_REPO_TAG_NAME)
   description: $(APPVEYOR_REPO_TAG_NAME)
   provider: GitHub
-  #Replace the secure text here with an encrypted github token (Google "appVeyor encrypted environment variables" for more info).
-  auth_token:
-    secure: 75vJL1NrdDUZRKMt8viMGtGBBPRpz31f0eoPDfJHm2bCmOTJsc9QxktpIc2n5SOk
   artifact: addon
   draft: false
   prerelease: false

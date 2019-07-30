@@ -519,9 +519,46 @@ class OutputPanel(wx.Panel):
 
 class OptionsPanel(wx.Panel):
 
-	def __init__(self, options, parent=None):
-		if not isinstance(options, dict):
-			raise ValueError(f"Invalid options provided: {options}")
+	def __init__(self, parent, definition):
+		if not isinstance(definition, dict):
+			raise ValueError(f"Invalid definition provided: {definition}")
+		self.definition = definition
+		self.options = definition['options']
+		super().__init__(parent, id=wx.ID_ANY)
+		optionsText = _("options")
+		sHelper = gui.guiHelper.BoxSizerHelper(
+			self,
+			sizer=wx.StaticBoxSizer(wx.StaticBox(self, label=optionsText), wx.VERTICAL)
+			)
+
+		absoluteLocationsText = _("&Treat object location criteria as absolute screen coordinates")
+		self.absoluteLocationsCheckBox = sHelper.addItem(wx.CheckBox(self, label=absoluteLocationsText))
+		self.absoluteLocationsCheckBox.Value = self.options.get('absoluteLocations', True)
+		self.absoluteLocationsCheckBox.Bind(
+			wx.EVT_CHECKBOX,
+			self.onAbsoluteLocationsCheckbox
+		)
+
+		handleDefinitionErrorsText = _("&Definition error handling:")
+		self.handleDefinitionErrorsChoices = ("ignore", "break", "raise")
+		self.handleDefinitionErrorsList = sHelper.addLabeledControl(
+			handleDefinitionErrorsText,
+			wx.Choice,
+			choices=self.handleDefinitionErrorsChoices)
+		curChoice = self.options.get('handleDefinitionErrors', "break")
+		self.handleDefinitionErrorsList.Selection = self.handleDefinitionErrorsChoices.index(curChoice)
+		self.handleDefinitionErrorsList.Bind(
+			wx.EVT_CHOICE,
+			skipEventAndCall(self.onHandleDefinitionErrorsListChange)
+			)
+
+		self.SetSizerAndFit(sHelper.sizer)
+	def onAbsoluteLocationsCheckbox(self, evt):
+		self.options['absoluteLocations'] = evt.IsChecked()
+
+	def onHandleDefinitionErrorsListChange(self):
+		self.options['handleDefinitionErrors'] = self.handleDefinitionErrorsChoices[
+			self.handleDefinitionErrorsList.Selection]
 
 
 class SingleDefinitionDialog(gui.SettingsDialog):
@@ -556,11 +593,15 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 			self.definition['functions'] = {}
 		self.inputPanel = InputPanel(parent=self, definition=self.definition, obj=self.obj)
 		settingsSizerHelper.addItem(self.inputPanel)
+
+		if self.definition.get('options') is None:
+			self.definition['options'] = {}
+		self.optionsPanel = OptionsPanel(parent=self, definition=self.definition)
+		settingsSizerHelper.addItem(self.optionsPanel)
+
 		if self.definition.get('output') is None:
 			self.definition['output'] = {}
 		self.outputPanel = OutputPanel(parent=self, definition=self.definition, obj=self.obj)
-		if self.definition.get('options') is None:
-			self.definition['options'] = {}
 		settingsSizerHelper.addItem(self.outputPanel)
 
 	def postInit(self):

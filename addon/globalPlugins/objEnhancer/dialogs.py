@@ -9,8 +9,9 @@ import wx
 import gui
 import configobj
 import addonHandler
-from .definitionEvaluator import ObjEnhancerOverlay
+from .definitionEvaluator import ObjEnhancerOverlay, getObjectVars
 from .definitionFileHandler import validateDefinitionObj
+from . import constants
 import NVDAObjects
 from copy import copy
 from logHandler import log
@@ -34,43 +35,15 @@ def skipEventAndCall(handler):
 	return wrapWithEventSkip
 
 
-outputAttributes = [
-	"description",
-	"name",
-	"placeholder",
-	"presentationType",
-	"role",
-	"roleText"
-]
-
-inputAttributes = [
-	"location",
-	"role",
-	"windowClassName",
-	"windowControlID",
-	"bitmapHash"
-]
-
-
 class AddInputEntryDialog(wx.Dialog):
 
-	@classmethod
-	def getObjectVars(cls, obj):
-		for attr in inputAttributes:
-			try:
-				val = getattr(obj, attr)
-			except Exception:
-				func = vars(utils).get(attr)
-				if not callable(func):
-					log.exception()
-					continue
-				val = MethodType(func, obj)()
-			yield (attr, val)
-
-	def __init__(self, parent, title, obj):
+	def __init__(self, parent, title, obj, objectVars=None):
 		super().__init__(parent, title=title)
 		self.obj = obj
-		self.objectVars = list(self.getObjectVars(obj)) if obj else []
+		if objectVars:
+			self.objectVars = objectVars
+		else:
+			self.objectVars = list(getObjectVars(obj, constants.INPUT_ATTRIBUTES)) if obj else []
 
 		mainSizer = wx.BoxSizer(wx.VERTICAL)
 		sHelper = gui.guiHelper.BoxSizerHelper(self, orientation=wx.VERTICAL)
@@ -212,13 +185,14 @@ class EditInputEntryDialog(wx.Dialog):
 
 class InputPanel(wx.Panel):
 
-	def __init__(self, parent, definition, obj=None):
+	def __init__(self, parent, definition, obj=None, objectVars=None):
 		if not isinstance(definition, dict):
 			raise ValueError(f"Invalid definition provided: {definition}")
 		self.definition = definition
 		self.input = list(definition['input'].items())
 		self.functions = list(definition['functions'].items())
 		self.obj = obj
+		self.objectVars = objectVars
 		super().__init__(parent, id=wx.ID_ANY)
 		sizer = gui.guiHelper.BoxSizerHelper(self, orientation=wx.HORIZONTAL)
 		# Translators: The label for input list.
@@ -275,7 +249,8 @@ class InputPanel(wx.Panel):
 		with AddInputEntryDialog(
 			self,
 			title=_("Add filter attribute"),
-			obj=self.obj
+			obj=self.obj,
+			objectVars=self.objectVars
 		) as entryDialog:
 			if entryDialog.ShowModal() != wx.ID_OK:
 				return
@@ -411,7 +386,7 @@ class OutputPanel(wx.Panel):
 		attributeSizer.AddSpacer(gui.guiHelper.SPACE_BETWEEN_ASSOCIATED_CONTROL_HORIZONTAL)
 		self.attributeCombo = wx.ComboBox(
 			self,
-			choices=outputAttributes,
+			choices=constants.OUTPUT_ATTRIBUTES,
 			style=wx.CB_DROPDOWN
 		)
 		attributeSizer.Add(self.attributeCombo)
@@ -470,7 +445,7 @@ class OutputPanel(wx.Panel):
 		with AddOutputEntryDialog(
 			self,
 			title=_("Add output attribute"),
-			attributes=outputAttributes
+			attributes=constants.OUTPUT_ATTRIBUTES
 		) as entryDialog:
 			if entryDialog.ShowModal() != wx.ID_OK:
 				return
@@ -562,7 +537,14 @@ class OptionsPanel(wx.Panel):
 
 class SingleDefinitionDialog(gui.SettingsDialog):
 
-	def __init__(self, parent, moduleDefinitions, definition=None, obj=None, multiInstanceAllowed=False):
+	def __init__(
+			self,
+			parent,
+			moduleDefinitions,
+			definition=None,
+			obj=None,
+			objectVars=None,
+			multiInstanceAllowed=False):
 		if definition is None and obj is None:
 			raise ValueError("Either obj or definition is required")
 		elif obj and not isinstance(obj, NVDAObjects.NVDAObject):
@@ -577,6 +559,7 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 			self.title = _("New definition")
 		self.definition = definition
 		self.obj = obj
+		self.objectVars = objectVars
 		self.moduleDefinitions = moduleDefinitions
 		super(SingleDefinitionDialog, self).__init__(parent, multiInstanceAllowed=multiInstanceAllowed)
 
@@ -590,7 +573,12 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 			self.definition['input'] = {}
 		if self.definition.get('functions') is None:
 			self.definition['functions'] = {}
-		self.inputPanel = InputPanel(parent=self, definition=self.definition, obj=self.obj)
+		self.inputPanel = InputPanel(
+			parent=self,
+			definition=self.definition,
+			obj=self.obj,
+			objectVars=self.objectVars
+		)
 		settingsSizerHelper.addItem(self.inputPanel)
 
 		if self.definition.get('options') is None:

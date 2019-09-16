@@ -9,6 +9,7 @@ import addonHandler
 import globalPluginHandler
 from . import definitionFileHandler
 from configobj import ConfigObj
+from . import constants
 import os
 from logHandler import log
 import api
@@ -119,6 +120,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			gui.mainFrame._popupSettingsDialog,
 			dialogs.SingleDefinitionDialog,
 			obj=obj,
+			objectVars=list(definitionEvaluator.getObjectVars(obj, constants.INPUT_ATTRIBUTES)),
 			moduleDefinitions=self.getDefinitionsForAppModule(obj.appModule, create=True)
 		)
 

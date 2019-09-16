@@ -104,3 +104,19 @@ def findMatchingDefinitionsForObj(obj, definitions, objCache):
 		if evaluateObjectAttributes(obj, definition, objCache):
 			return definition
 	return None
+
+def getObjectVars(obj, inputAttributes):
+	for attr in inputAttributes:
+		try:
+			val = getattr(obj, attr)
+		except Exception:
+			func = vars(utils).get(attr)
+			if not callable(func):
+				log.exception(f"Couldn't get {attr} from {obj!r}")
+				continue
+			try:
+				val = MethodType(func, obj)()
+			except Exception:
+				log.exception(f"Couldn't get value for utility function {attr} from {obj!r}")
+				continue
+		yield (attr, val)

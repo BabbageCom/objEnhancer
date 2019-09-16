@@ -15,6 +15,7 @@ import NVDAObjects
 from copy import copy
 from logHandler import log
 from ast import literal_eval
+from . import utils
 addonHandler.initTranslation()
 
 # Used to ensure that event handlers call Skip(). Not calling skip can cause focus problems for controls. More
@@ -46,7 +47,8 @@ inputAttributes = [
 	"location",
 	"role",
 	"windowClassName",
-	"windowControlID"
+	"windowControlID",
+	"bitmapHash"
 ]
 
 
@@ -54,18 +56,15 @@ class AddInputEntryDialog(wx.Dialog):
 
 	@classmethod
 	def getObjectVars(cls, obj):
-		for attr in dir(obj):
-			if attr not in inputAttributes:
-				continue
-			if attr.startswith("_"):
-				continue
+		for attr in inputAttributes:
 			try:
 				val = getattr(obj, attr)
 			except Exception:
-				log.exception()
-				continue
-			if callable(val) or val is None:
-				continue
+				func = vars(utils).get(attr)
+				if not callable(func):
+					log.exception()
+					continue
+				val = MethodType(func, obj)()
 			yield (attr, val)
 
 	def __init__(self, parent, title, obj):

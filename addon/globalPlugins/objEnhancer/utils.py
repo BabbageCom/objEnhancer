@@ -6,7 +6,7 @@ import base64
 def locationBitmapHash(location):
 	sb = screenBitmap.ScreenBitmap(location.width, location.height)
 	pixels = sb.captureImage(*location)
-	digest = hashlib.sha1(pixels).digest()
+	digest = hashlib.sha1(bytes(pixels)).digest()
 	return base64.b64encode(digest)
 
 

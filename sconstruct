@@ -55,7 +55,7 @@ def mdTool(env):
 env = Environment(ENV=os.environ, tools=['gettexttool', mdTool])
 env.Append(**buildVars.addon_info)
 
-addonFile = env.File("${addon_name}-${addon_version}.nvda-addon")
+addonFile = env.File("${addon_name}.nvda-addon")
 
 def addonGenerator(target, source, env, for_signature):
 	action = env.Action(lambda target, source, env : createAddonBundleFromPath(source[0].abspath, target[0].abspath) and None,

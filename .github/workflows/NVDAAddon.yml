@@ -19,3 +19,8 @@ jobs:
       run: scons
     - name: Build pot
       run: scons pot
+    - name: Upload add-on
+      uses: actions/upload-artifact@v1
+      with:
+        name: objEnhancer.nvda-addon
+        path: objEnhancer.nvda-addon

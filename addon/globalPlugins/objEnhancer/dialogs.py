@@ -38,7 +38,7 @@ def skipEventAndCall(handler):
 class AddInputEntryDialog(wx.Dialog):
 
 	def __init__(self, parent, title, obj, objectVars=None):
-		super().__init__(parent, title=title)
+		super(AddInputEntryDialog, self).__init__(parent, title=title)
 		self.obj = obj
 		if objectVars:
 			self.objectVars = objectVars
@@ -98,7 +98,7 @@ class AddInputEntryDialog(wx.Dialog):
 class EditInputEntryDialog(wx.Dialog):
 
 	def __init__(self, parent, title, values):
-		super().__init__(parent, title=title)
+		super(EditInputEntryDialog, self).__init__(parent, title=title)
 		self.values = copy(values)
 
 		mainSizer = wx.BoxSizer(wx.VERTICAL)
@@ -193,7 +193,7 @@ class InputPanel(wx.Panel):
 		self.functions = list(definition['functions'].items())
 		self.obj = obj
 		self.objectVars = objectVars
-		super().__init__(parent, id=wx.ID_ANY)
+		super(InputPanel, self).__init__(parent, id=wx.ID_ANY)
 		sizer = gui.guiHelper.BoxSizerHelper(self, orientation=wx.HORIZONTAL)
 		# Translators: The label for input list.
 		inputText = _("&Filter criteria:")
@@ -320,7 +320,7 @@ class InputPanel(wx.Panel):
 class AddOutputEntryDialog(wx.Dialog):
 
 	def __init__(self, parent, title, attributes):
-		super().__init__(parent, title=title)
+		super(AddOutputEntryDialog, self).__init__(parent, title=title)
 		mainSizer = wx.BoxSizer(wx.VERTICAL)
 		sHelper = gui.guiHelper.BoxSizerHelper(self, orientation=wx.VERTICAL)
 
@@ -353,7 +353,7 @@ class OutputPanel(wx.Panel):
 		if not isinstance(definition, dict):
 			raise ValueError(f"Invalid definition provided: {definition}")
 		self.output = list(definition['output'].items())
-		super().__init__(parent, id=wx.ID_ANY)
+		super(OutputPanel, self).__init__(parent, id=wx.ID_ANY)
 		sizer = gui.guiHelper.BoxSizerHelper(self, orientation=wx.HORIZONTAL)
 		# Translators: The label for output list.
 		outputText = _("&Attribute changes:")
@@ -498,7 +498,7 @@ class OptionsPanel(wx.Panel):
 			raise ValueError(f"Invalid definition provided: {definition}")
 		self.definition = definition
 		self.options = definition['options']
-		super().__init__(parent, id=wx.ID_ANY)
+		super(OptionsPanel, self).__init__(parent, id=wx.ID_ANY)
 		optionsText = _("options")
 		sHelper = gui.guiHelper.BoxSizerHelper(
 			self,
@@ -615,7 +615,7 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 			if not isinstance(self.Parent, DefinitionsPanel):
 				parent.write()
 		finally:
-			super().onOk(evt)
+			super(SingleDefinitionDialog, self).onOk(evt)
 
 	def onCancel(self, evt):
 		try:
@@ -624,7 +624,7 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 				parent.reload()
 				validateDefinitionObj(parent)
 		finally:
-			super().onCancel(evt)
+			super(SingleDefinitionDialog, self).onCancel(evt)
 
 
 class DefinitionsPanel(gui.settingsDialogs.SettingsPanel):
@@ -733,10 +733,10 @@ class DefinitionsDialog(gui.settingsDialogs.MultiCategorySettingsDialog):
 	def __init__(self, parent, multipleDefinitionsDict, initialCategory=None):
 		self.multipleDefinitionsDict = multipleDefinitionsDict
 		self._categoryClasses = []
-		super().__init__(parent, initialCategory=initialCategory)
+		super(DefinitionsDialog, self).__init__(parent, initialCategory=initialCategory)
 
 	def makeSettings(self, settingsSizer):
-		super().makeSettings(settingsSizer)
+		super(DefinitionsDialog, self).makeSettings(settingsSizer)
 		# Hack, override the label for categories.
 		# This really should be an option on MultiCategorySettingsDialog.
 		try:

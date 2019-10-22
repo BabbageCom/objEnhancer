@@ -58,7 +58,7 @@ def availableDefinitionFiles():
 def getDefinitionFileFromAppName(appName, errorNotFound=False):
 	filePath = os.path.abspath(os.path.join(
 		getDefinitionFileDir(),
-		f'{appName.replace(".","_")}.objdef.ini')
+		"{appName}.objdef.ini".format(appName=appName.replace(".","_")))
 		)
 	if errorNotFound and not os.path.isfile(filePath):
 		raise IOError("{path} does not exist".format(path=filePath))
@@ -75,13 +75,13 @@ def validateDefinitionObj(obj):
 			section_list.append(key)
 		else:
 			section_list.append('[missing section]')
-		section_string = ', '.join(section_list)
+		section_string = u', '.join(section_list)
 		if error is False:
-			error = 'Missing value or section.'
+			error = u'Missing value or section.'
 		errors.append(section_string + ' = ' + error.message)
 	if errors:
-		errors = "; ".join(errors)
-		raise ValidateError(f"Errors in {obj}: {errors}")
+		errors = u"; ".join(errors)
+		raise ValidateError("Errors in {obj}: {errors}".format(obj=obj, errors=errors))
 
 
 def getDefinitionObjFromDefinitionFile(definitionFile, create=True):
@@ -98,7 +98,7 @@ def getDefinitionObjFromDefinitionFile(definitionFile, create=True):
 		interpolation=False,
 		unrepr=True,
 		configspec=defFileSpec
-		)
+	)
 	validateDefinitionObj(obj)
 	return obj
 
@@ -107,4 +107,4 @@ def getDefinitionObjFromAppName(appName, create=True):
 	return getDefinitionObjFromDefinitionFile(
 		getDefinitionFileFromAppName(appName, errorNotFound=not create),
 		create
-		)
+	)

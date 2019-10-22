@@ -42,15 +42,15 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			if reload:
 				self.definitions[appName].reload()
 				definitionFileHandler.validateDefinitionObj(self.definitions[appName])
-				log.debug(f"Obj Enhancer definition file for {appName} reloaded")
+				log.debug("Obj Enhancer definition file for {appName} reloaded".format(appName=appName))
 			else:
-				log.debug(f"Obj Enhancer definition file for {appName} already loaded")
+				log.debug("Obj Enhancer definition file for {appName} already loaded".format(appName=appName))
 		elif fileName:
 			self.definitions[appName] = definitionFileHandler.getDefinitionObjFromDefinitionFile(fileName, create)
-			log.debug(f"Obj Enhancer definition file for {appName} loaded from specified path {fileName}")
+			log.debug("Obj Enhancer definition file for {appName} loaded from specified path {fileName}".format(appName=appName, fileName=fileName))
 		else:
 			self.definitions[appName] = definitionFileHandler.getDefinitionObjFromAppName(appName, create)
-			log.debug(f"Obj Enhancer definition file for {appName} loaded")
+			log.debug("Obj Enhancer definition file for {appName} loaded".format(appName=appName))
 
 	def unloadDefinition(self, appName, obj=None, delete=False):
 		defObj = obj or self.definitions.get(appName, None)

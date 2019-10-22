@@ -104,7 +104,7 @@ class EditInputEntryDialog(wx.Dialog):
 		mainSizer = wx.BoxSizer(wx.VERTICAL)
 		sHelper = gui.guiHelper.BoxSizerHelper(self, orientation=wx.VERTICAL)
 
-		valuesText = f"&{title}"
+		valuesText = "&{title}".format(title=title)
 		self.valuesList = sHelper.addLabeledControl(
 			valuesText, gui.nvdaControls.AutoWidthColumnListCtrl,
 			itemTextCallable=self.getItemTextForValuesList,
@@ -187,7 +187,7 @@ class InputPanel(wx.Panel):
 
 	def __init__(self, parent, definition, obj=None, objectVars=None):
 		if not isinstance(definition, dict):
-			raise ValueError(f"Invalid definition provided: {definition}")
+			raise ValueError("Invalid definition provided: {definition}".format(definition=definition))
 		self.definition = definition
 		self.input = list(definition['input'].items())
 		self.functions = list(definition['functions'].items())
@@ -265,7 +265,7 @@ class InputPanel(wx.Panel):
 			if newAttr == attr:
 				# Translators: An error reported when adding an attribute that is already present.
 				gui.messageBox(
-					_(f'Attribute {newAttr!r} is already added.'),
+					_("Attribute {newAttr!r} is already added.").format(newAttr=newAttr),
 					_("Error"), wx.OK | wx.ICON_ERROR)
 				self.inputList.Select(index)
 				self.inputList.Focus(index)
@@ -285,7 +285,7 @@ class InputPanel(wx.Panel):
 		attr, values = self.input[index]
 		with EditInputEntryDialog(
 			self,
-			title=_(f"Filter values for {attr}"),
+			title=_("Filter values for {attr}").format(attr=attr),
 			values=values,
 		) as entryDialog:
 			if entryDialog.ShowModal() != wx.ID_OK:
@@ -294,7 +294,7 @@ class InputPanel(wx.Panel):
 			if not newValues:
 				# Translators: An error reported when adding an attribute that is already present.
 				gui.messageBox(
-					_(f'NO values specified.'),
+					_("NO values specified."),
 					_("Error"), wx.OK | wx.ICON_ERROR)
 			values[:] = newValues
 
@@ -351,7 +351,7 @@ class OutputPanel(wx.Panel):
 
 	def __init__(self, parent, definition, obj=None):
 		if not isinstance(definition, dict):
-			raise ValueError(f"Invalid definition provided: {definition}")
+			raise ValueError("Invalid definition provided: {definition}").format(definition=definition)
 		self.output = list(definition['output'].items())
 		super(OutputPanel, self).__init__(parent, id=wx.ID_ANY)
 		sizer = gui.guiHelper.BoxSizerHelper(self, orientation=wx.HORIZONTAL)
@@ -456,7 +456,7 @@ class OutputPanel(wx.Panel):
 			if newAttr == attr:
 				# Translators: An error reported when adding an attribute that is already present.
 				gui.messageBox(
-					_(f'Attribute {newAttr!r} is already present.'),
+					_('Attribute {newAttr!r} is already present.').format(newAttr=newAttr),
 					_("Error"), wx.OK | wx.ICON_ERROR)
 				self.outputList.Select(index)
 				self.outputList.Focus(index)
@@ -495,7 +495,7 @@ class OptionsPanel(wx.Panel):
 
 	def __init__(self, parent, definition):
 		if not isinstance(definition, dict):
-			raise ValueError(f"Invalid definition provided: {definition}")
+			raise ValueError("Invalid definition provided: {definition}".format(definition=definition))
 		self.definition = definition
 		self.options = definition['options']
 		super(OptionsPanel, self).__init__(parent, id=wx.ID_ANY)
@@ -753,7 +753,7 @@ class DefinitionsDialog(gui.settingsDialogs.MultiCategorySettingsDialog):
 		for name, definitions in self.multipleDefinitionsDict.items():
 			self._categoryClasses.append(
 				type(
-					f"{name.capitalize()}DefinitionsPanel",
+					"{name}DefinitionsPanel".format(name=name.capitalize()),
 					(DefinitionsPanel,),
 					dict(
 						title=name.capitalize(),

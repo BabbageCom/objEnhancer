@@ -17,10 +17,10 @@ from configobj import Section
 
 def evaluateObjectAttributes(obj, definition, cache):
 	if not isinstance(obj, NVDAObject):
-		raise ValueError(f"Invalid NVDAObject specified: {obj!r}")
+		raise ValueError("Invalid NVDAObject specified: {obj!r}".format(obj=obj))
 	input = definition.get('input', {})
 	if not (isinstance(definition, Section) and input):
-		raise ValueError(f"Invalid definition spesification provided: {definition}")
+		raise ValueError("Invalid definition spesification provided: {definition}".format(definition=definition))
 	options = definition.get('options', {})
 	functions = definition.get('functions', {})
 	for attr, possibleVals in input.items():
@@ -46,7 +46,7 @@ def evaluateObjectAttributes(obj, definition, cache):
 				if handleErrors == "raise":
 					raise
 				else:
-					log.exception(f"Error while handling objEnhancer definition {definition}")
+					log.exception("Error while handling objEnhancer definition {definition}".format(definition=definition))
 					if handleErrors == "break":
 						break
 					elif handleErrors == "ignore":
@@ -76,7 +76,7 @@ def getOverlayClassForDefinition(definition):
 	name = definition.name[0].upper() + definition.name[1:]
 	output = definition.get('output', {})
 	if not (isinstance(definition, Section) and output):
-		raise ValueError(f"Invalid definition specification provided: {definition}")
+		raise ValueError("Invalid definition specification provided: {definition}".format(definition=definition))
 	output = output.dict()
 	output['_objEnhancerDefinition'] = definition
 	return type(
@@ -88,7 +88,7 @@ def getOverlayClassForDefinition(definition):
 
 def findMatchingDefinitionsForObj(obj, definitions, objCache):
 	if not isinstance(definitions, configobj.ConfigObj):
-		raise ValueError(f"Invalid spesification provided: {definitions}")
+		raise ValueError("Invalid spesification provided: {definitions}".format(definitions=definitions))
 	for name, definition in definitions.items():
 		if definition['isAbstract']:
 			continue
@@ -97,7 +97,7 @@ def findMatchingDefinitionsForObj(obj, definitions, objCache):
 			try:
 				parentDef = definitions[parent]
 			except KeyError:
-				log.error(f"Definition {name} refered to unknown parent {parent}")
+				log.error("Definition {name} refered to unknown parent: {parent}".format(parent=parent))
 				continue
 			if not evaluateObjectAttributes(obj, parentDef, objCache):
 				return None
@@ -112,11 +112,11 @@ def getObjectVars(obj, inputAttributes):
 		except Exception:
 			func = vars(utils).get(attr)
 			if not callable(func):
-				log.exception(f"Couldn't get {attr} from {obj!r}")
+				log.exception("Couldn't get {attr} from {obj!r}".format(attr=attr, obj=obj))
 				continue
 			try:
 				val = MethodType(func, obj)()
 			except Exception:
-				log.exception(f"Couldn't get value for utility function {attr} from {obj!r}")
+				log.exception("Couldn't get value for utility function {attr} from {obj!r}".format(attr=attr, obj=obj))
 				continue
 		yield (attr, val)

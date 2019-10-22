@@ -628,6 +628,14 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 			)
 			self.nameEdit.SetFocus()
 			return
+		if not self.inputPanel.input:
+			# Translators: An error reported when adding a definition without a input.
+			gui.messageBox(
+				_("You must add valid input criteria"),
+				_("Error"), wx.OK | wx.ICON_ERROR
+			)
+			self.inputPanel.SetFocus()
+			return
 		try:
 			parent = self.moduleDefinitions
 			self.definition["input"] = dict(self.inputPanel.input)

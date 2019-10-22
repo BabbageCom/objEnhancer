@@ -116,11 +116,12 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			# but there is no current navigator object.
 			ui.message(_("No navigator object"))
 			return
+		objectVars = list(definitionEvaluator.getObjectVars(obj, constants.INPUT_ATTRIBUTES))
 		wx.CallAfter(
 			gui.mainFrame._popupSettingsDialog,
 			dialogs.SingleDefinitionDialog,
 			obj=obj,
-			objectVars=list(definitionEvaluator.getObjectVars(obj, constants.INPUT_ATTRIBUTES)),
+			objectVars=objectVars,
 			moduleDefinitions=self.getDefinitionsForAppModule(obj.appModule, create=True)
 		)
 

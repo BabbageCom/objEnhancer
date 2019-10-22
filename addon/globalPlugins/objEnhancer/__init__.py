@@ -91,19 +91,22 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		return definitions
 
 	def chooseNVDAObjectOverlayClasses(self, obj, clsList):
-		defs = []
-		appDefs = self.getDefinitionsForAppModule(obj.appModule)
-		globalDefs = self.definitions['global']
-		if appDefs:
-			defs.append(appDefs)
-		if globalDefs:
-			defs.append(globalDefs)
-		objCache = {}
-		for relevantDefs in defs:
-			definition = definitionEvaluator.findMatchingDefinitionsForObj(obj, relevantDefs, objCache)
-			if definition:
-				clsList.insert(0, definitionEvaluator.getOverlayClassForDefinition(definition))
-				break
+		try:
+			defs = []
+			appDefs = self.getDefinitionsForAppModule(obj.appModule)
+			globalDefs = self.definitions['global']
+			if appDefs:
+				defs.append(appDefs)
+			if globalDefs:
+				defs.append(globalDefs)
+			objCache = {}
+			for relevantDefs in defs:
+				definition = definitionEvaluator.findMatchingDefinitionsForObj(obj, relevantDefs, objCache)
+				if definition:
+					clsList.insert(0, definitionEvaluator.getOverlayClassForDefinition(definition))
+					break
+		except Exception:
+			log.exception()
 
 	@script(
 		description=_("Customize the properties of the navigator object"),
@@ -140,3 +143,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		)
 	def script_openDefinitionsDialog(self, gesture):
 		self.openDefinitionsDialog()
+
+	@script(
+		description=_("Copies the base64 encoded SHA1 hash of the bitmap of the navigator object to the clipboard"),
+		gesture="kb:NVDA+control+alt+h"
+	)
+	def script_copyHashToClipboard(self, gesture):
+		if api.copyToClip(bitmapHash(api.getNavigatorObject())):
+			ui.message("Hash copied to clipboard")
+		else:
+			ui.message("Couldn't copy hash to clipboard")

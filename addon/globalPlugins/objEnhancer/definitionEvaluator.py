@@ -19,7 +19,7 @@ def evaluateObjectAttributes(obj, definition, cache):
 	if not isinstance(obj, NVDAObject):
 		raise ValueError("Invalid NVDAObject specified: {obj!r}".format(obj=obj))
 	input = definition.get('input', {})
-	if not (isinstance(definition, Section) and isinstance(input, dict)):
+	if not (isinstance(definition, Section) and input):
 		raise ValueError("Invalid definition spesification provided: {definition}".format(definition=definition))
 	functions = definition.get('functions', {})
 	for attr, possibleVals in input.items():

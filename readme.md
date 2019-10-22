@@ -1,8 +1,8 @@
 # Object Enhancer
-* Version 2017.1
+* Version 2019.2
 * Author: Leonard de Ruijter (Babbage B.V.) <leonard@babbage.com>
 
-Object Enhancer allows you to change properties of NVDAObjects using configuration (INI) files. These files are stored under the "objEnhancer" folder in the NVDA configuration folder (usually "%appdata%\\nvda") and have the ".objdef.ini" file extension. Property mutation takes place when an object gains focus or becomes the navigator object.
+Object Enhancer allows you to change properties of NVDAObjects using configuration (INI) files. These files are stored under the "objEnhancer" folder in the NVDA configuration folder (usually "%appdata%\\nvda") and have the ".objdef.ini" file extension. Property mutation takes place when the object is loaded.
 
 ## Example: notepad
 The following example changes the label of the Notepad text area and menu bar:
@@ -10,24 +10,16 @@ The following example changes the label of the Notepad text area and menu bar:
 ```
 [randomIdentifier]
 	[[input]]
-		windowClassName = u'Edit'
-	[options]]
-		absoluteLocations = True
-		raiseOutputErrors = True
-		ignoreNonexistentAttributes = True
+		windowClassName = ['Edit']
 	[[output]]
 		name = 'Notepad text field'
 
 [anotherRandomIdentifierForMenuBar]
 	[[input]]
-		windowClassName = u'Notepad'
-		role = 10
-		parent.role = 1
-		parent.parent.windowClassName = u'#32769'
-	[[options]]
-		absoluteLocations = True
-		raiseOutputErrors = True
-		ignoreNonexistentAttributes = True
+		windowClassName = ['Notepad']
+		role = [10]
+		parent.role = [1]
+		parent.parent.windowClassName = ['#32769']
 	[[output]]
 		name = 'Notepad menu bar'
 ```
@@ -39,12 +31,9 @@ An Object Enhancer definition has the following syntax
 
 ```
 [identifier] # Just a string, without quotes
-	[input] # mandatory
-		property = value # for example: location = (1,2,3,4,) or role = 4
-	[options]] #optional
-		absoluteLocations = True # Whether to parse provided locations as absolute (see below)
-		raiseOutputErrors = True # Raise an error whenever it is not possible to set an object's property
-		ignoreNonexistentAttributes = True # allow setting foo = bar on an object, even though the object does not have the foo property. If set to False, behavior depends on the value of raiseOutputErrors. If raiseOutputErrors is False, the property will be ignored. If True, an error is raised. Please note that the latter can result in many errors.
+	[input]  # mandatory
+		property = [value1, value2, ...]  # for example: location = [(1,2,3,4,)] or role = [4]
+	absoluteLocations = True # Whether to parse provided locations as absolute (see below)
 	[output] #mandatory
 		property = value # for example: name = 'label' or role = 8
 ```

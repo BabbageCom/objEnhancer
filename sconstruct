@@ -113,7 +113,7 @@ def generateManifest(source, dest):
 		f.write(manifest)
 
 def generateTranslatedManifest(source, language, out):
-	_ = gettext.translation("nvda", localedir=os.path.join("addon", "locale"), languages=[language]).ugettext
+	_ = gettext.translation("nvda", localedir=os.path.join("addon", "locale"), languages=[language]).gettext
 	vars = {}
 	for var in ("addon_summary", "addon_description"):
 		vars[var] = _(buildVars.addon_info[var])

@@ -703,9 +703,15 @@ class DefinitionsPanel(gui.settingsDialogs.SettingsPanel):
 		if column == 0:
 			return entry.name
 		elif column == 1:
-			return "test"
+			return ", ".join(
+				"{attr}: {val}".format(attr=attr, val=val)
+				for attr, val in entry.get("input", {}).items()
+			)
 		elif column == 2:
-			return "test2"
+			return ", ".join(
+				"{attr}: {val}".format(attr=attr, val=val)
+				for attr, val in entry.get("output", {}).items()
+			)
 		else:
 			raise ValueError("Unknown column: %d" % column)
 

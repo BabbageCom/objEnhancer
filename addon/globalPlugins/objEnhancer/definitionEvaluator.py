@@ -48,7 +48,7 @@ def evaluateObjectAttributes(obj, definition, cache):
 					log.exception("Error while handling objEnhancer definition {definition}".format(definition=definition))
 					if handleErrors == "break":
 						break
-					elif handleErrors == "ignore":
+					elif handleErrors == "continue":
 						continue
 			cache[(attr, tupleParams)] = val
 		if val in possibleVals:

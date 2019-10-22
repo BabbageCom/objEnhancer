@@ -18,7 +18,7 @@ defFileSpec = ConfigObj(StringIO(
 	parent = string(default="")
 	isAbstract = boolean(default=False)
 	absoluteLocations = boolean(default=True)
-	handleDefinitionErrors = option("ignore", "break", "raise", default="break")
+	handleDefinitionErrors = option("continue", "break", "raise", default="break")
 	[[input]]
 		___many___ = list(default=list())
 	[[functions]]

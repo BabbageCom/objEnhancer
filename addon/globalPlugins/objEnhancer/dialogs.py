@@ -588,7 +588,7 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 		)
 
 		handleDefinitionErrorsText = _("&Definition error handling:")
-		self.handleDefinitionErrorsChoices = ("ignore", "break", "raise")
+		self.handleDefinitionErrorsChoices = ("continue", "break", "raise")
 		self.handleDefinitionErrorsList = settingsSizerHelper.addLabeledControl(
 			handleDefinitionErrorsText,
 			wx.Choice,

@@ -595,8 +595,16 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 		self.nameEdit.SetFocus()
 
 	def onOk(self, evt):
+		name = self.nameEdit.Value
+		if not name:
+			# Translators: An error reported when adding a definition without a name.
+			gui.messageBox(
+				_("You must enter a valid name"),
+				_("Error"), wx.OK | wx.ICON_ERROR
+			)
+			self.nameEdit.SetFocus()
+			return
 		try:
-			name = self.nameEdit.Value
 			parent = self.moduleDefinitions
 			self.definition["input"] = dict(self.inputPanel.input)
 			self.definition["functions"] = dict(self.inputPanel.functions)

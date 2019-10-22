@@ -208,6 +208,7 @@ class InputPanel(wx.Panel):
 		self.inputList.InsertColumn(0, _("Attribute"))
 		# Translators: The label for a column in input list used to identify an item's value.
 		self.inputList.InsertColumn(1, _("Value"))
+		self.inputList.InsertColumn(2, _("Parameters"))
 		self.inputList.Bind(wx.EVT_LIST_ITEM_FOCUSED, self.onListItemFocused)
 
 		self.editingItem = None
@@ -234,6 +235,16 @@ class InputPanel(wx.Panel):
 			return entry[column]
 		elif column == 1:
 			return ", ".join(str(x) for x in entry[column])
+		elif column == 2:
+			functionDef = next((
+				t[1] for t in self.functions if t[0] == entry[0]
+			), None)
+			if not functionDef:
+				return ""
+			return ", ".join(
+				"{attr}: {val}".format(attr=attr, val=val)
+				for attr, val in functionDef.items()
+			)
 		else:
 			raise ValueError("Unknown column: %d" % column)
 
@@ -491,50 +502,6 @@ class OutputPanel(wx.Panel):
 		self.outputList.SetFocus()
 
 
-class OptionsPanel(wx.Panel):
-
-	def __init__(self, parent, definition):
-		if not isinstance(definition, dict):
-			raise ValueError("Invalid definition provided: {definition}".format(definition=definition))
-		self.definition = definition
-		self.options = definition['options']
-		super(OptionsPanel, self).__init__(parent, id=wx.ID_ANY)
-		optionsText = _("options")
-		sHelper = gui.guiHelper.BoxSizerHelper(
-			self,
-			sizer=wx.StaticBoxSizer(wx.StaticBox(self, label=optionsText), wx.VERTICAL)
-			)
-
-		absoluteLocationsText = _("&Treat object location criteria as absolute screen coordinates")
-		self.absoluteLocationsCheckBox = sHelper.addItem(wx.CheckBox(self, label=absoluteLocationsText))
-		self.absoluteLocationsCheckBox.Value = self.options.get('absoluteLocations', True)
-		self.absoluteLocationsCheckBox.Bind(
-			wx.EVT_CHECKBOX,
-			self.onAbsoluteLocationsCheckbox
-		)
-
-		handleDefinitionErrorsText = _("&Definition error handling:")
-		self.handleDefinitionErrorsChoices = ("ignore", "break", "raise")
-		self.handleDefinitionErrorsList = sHelper.addLabeledControl(
-			handleDefinitionErrorsText,
-			wx.Choice,
-			choices=self.handleDefinitionErrorsChoices)
-		curChoice = self.options.get('handleDefinitionErrors', "break")
-		self.handleDefinitionErrorsList.Selection = self.handleDefinitionErrorsChoices.index(curChoice)
-		self.handleDefinitionErrorsList.Bind(
-			wx.EVT_CHOICE,
-			skipEventAndCall(self.onHandleDefinitionErrorsListChange)
-			)
-
-		self.SetSizerAndFit(sHelper.sizer)
-	def onAbsoluteLocationsCheckbox(self, evt):
-		self.options['absoluteLocations'] = evt.IsChecked()
-
-	def onHandleDefinitionErrorsListChange(self):
-		self.options['handleDefinitionErrors'] = self.handleDefinitionErrorsChoices[
-			self.handleDefinitionErrorsList.Selection]
-
-
 class SingleDefinitionDialog(gui.SettingsDialog):
 
 	def __init__(
@@ -581,18 +548,75 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 		)
 		settingsSizerHelper.addItem(self.inputPanel)
 
-		if self.definition.get('options') is None:
-			self.definition['options'] = {}
-		self.optionsPanel = OptionsPanel(parent=self, definition=self.definition)
-		settingsSizerHelper.addItem(self.optionsPanel)
-
 		if self.definition.get('output') is None:
 			self.definition['output'] = {}
 		self.outputPanel = OutputPanel(parent=self, definition=self.definition, obj=self.obj)
 		settingsSizerHelper.addItem(self.outputPanel)
 
+		parentText = _("&Inherrit settings from definition")
+		self.parentChoices = [
+			_("None")
+		]
+		self.parentChoices.extend(name for (name, defi) in self.moduleDefinitions.items() if defi is not self.definition)
+		self.parentList = settingsSizerHelper.addLabeledControl(
+			parentText,
+			wx.Choice,
+			choices=self.parentChoices
+		)
+		curChoice = self.definition.get('parent')
+		index = self.parentChoices.index(curChoice) if curChoice else 0
+		self.parentList.Selection = index
+		self.parentList.Bind(
+			wx.EVT_CHOICE,
+			skipEventAndCall(self.onParentListChange)
+		)
+
+		isAbstractText = _("&Definition is abstract, don't use it directly")
+		self.isAbstractCheckBox = settingsSizerHelper.addItem(wx.CheckBox(self, label=isAbstractText))
+		self.isAbstractCheckBox.Value = self.definition.get('isAbstract', False)
+		self.isAbstractCheckBox.Bind(
+			wx.EVT_CHECKBOX,
+			self.onIsAbstractCheckbox
+		)
+
+		absoluteLocationsText = _("&Treat object location criteria as absolute screen coordinates")
+		self.absoluteLocationsCheckBox = settingsSizerHelper.addItem(wx.CheckBox(self, label=absoluteLocationsText))
+		self.absoluteLocationsCheckBox.Value = self.definition.get('absoluteLocations', True)
+		self.absoluteLocationsCheckBox.Bind(
+			wx.EVT_CHECKBOX,
+			self.onAbsoluteLocationsCheckbox
+		)
+
+		handleDefinitionErrorsText = _("&Definition error handling:")
+		self.handleDefinitionErrorsChoices = ("ignore", "break", "raise")
+		self.handleDefinitionErrorsList = settingsSizerHelper.addLabeledControl(
+			handleDefinitionErrorsText,
+			wx.Choice,
+			choices=self.handleDefinitionErrorsChoices)
+		curChoice = self.definition.get('handleDefinitionErrors', "break")
+		self.handleDefinitionErrorsList.Selection = self.handleDefinitionErrorsChoices.index(curChoice)
+		self.handleDefinitionErrorsList.Bind(
+			wx.EVT_CHOICE,
+			skipEventAndCall(self.onHandleDefinitionErrorsListChange)
+		)
+
 	def postInit(self):
 		self.nameEdit.SetFocus()
+
+	def onParentListChange(self):
+		index = self.parentList.Selection
+		self.definition['parent'] = self.parentChoices[index] if index else None
+
+	def onIsAbstractCheckbox(self, evt):
+		self.definition['isAbstract'] = evt.IsChecked()
+
+	def onAbsoluteLocationsCheckbox(self, evt):
+		self.definition['absoluteLocations'] = evt.IsChecked()
+
+	def onHandleDefinitionErrorsListChange(self):
+		self.definition['handleDefinitionErrors'] = self.handleDefinitionErrorsChoices[
+			self.handleDefinitionErrorsList.Selection
+		]
 
 	def onOk(self, evt):
 		name = self.nameEdit.Value
@@ -609,7 +633,6 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 			self.definition["input"] = dict(self.inputPanel.input)
 			self.definition["functions"] = dict(self.inputPanel.functions)
 			self.definition["output"] = dict(self.outputPanel.output)
-			# self.definition[options] = dict(self.options)
 			if isinstance(self.definition, configobj.Section):
 				assert parent is self.definition.parent
 				# This is an existing definition

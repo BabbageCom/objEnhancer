@@ -17,12 +17,11 @@ defFileSpec = ConfigObj(StringIO(
 	u"""[__many__]
 	parent = string(default="")
 	isAbstract = boolean(default=False)
+	absoluteLocations = boolean(default=True)
+	handleDefinitionErrors = option("ignore", "break", "raise", default="break")
 	[[input]]
 		___many___ = list(default=list())
 	[[functions]]
-	[[options]]
-		absoluteLocations = boolean(default=True)
-		handleDefinitionErrors = option("ignore", "break", "raise", default="break")
 	[[output]]"""
 	),
 	indent_type="\t",

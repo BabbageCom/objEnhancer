@@ -21,7 +21,6 @@ def evaluateObjectAttributes(obj, definition, cache):
 	input = definition.get('input', {})
 	if not (isinstance(definition, Section) and input):
 		raise ValueError("Invalid definition spesification provided: {definition}".format(definition=definition))
-	options = definition.get('options', {})
 	functions = definition.get('functions', {})
 	for attr, possibleVals in input.items():
 		params = functions.get(attr, {})
@@ -42,7 +41,7 @@ def evaluateObjectAttributes(obj, definition, cache):
 				elif callable(val):
 					val = val(**params)
 			except Exception:
-				handleErrors = options['handleDefinitionErrors']
+				handleErrors = definition['handleDefinitionErrors']
 				if handleErrors == "raise":
 					raise
 				else:
@@ -54,7 +53,7 @@ def evaluateObjectAttributes(obj, definition, cache):
 			cache[(attr, tupleParams)] = val
 		if val in possibleVals:
 			continue
-		elif not options.get('absoluteLocations', True) and attr == 'location':
+		elif not definition.get('absoluteLocations', True) and attr == 'location':
 			for expectedVal in possibleVals:
 				relativeLocation = RectLTWH(*map(sub, expectedVal, val))
 				if relativeLocation.topLeft == relativeLocation.bottomRight:

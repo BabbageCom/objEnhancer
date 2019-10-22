@@ -135,18 +135,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		)
 
 	@script(
-		description=_("Open the Object Enhancer definitions dialogs"),
+		description=_("Open the Object Enhancer definitions dialog"),
 		gesture="kb:NVDA+control+shift+tab"
 		)
 	def script_openDefinitionsDialog(self, gesture):
 		self.openDefinitionsDialog()
-
-	@script(
-		description=_("Copies the base64 encoded SHA1 hash of the bitmap of the navigator object to the clipboard"),
-		gesture="kb:NVDA+control+alt+h"
-		)
-	def script_copyHashToClipboard(self, gesture):
-		if api.copyToClip(bitmapHash(api.getNavigatorObject()).decode("ascii")):
-			ui.message("Hash copied to clipboard")
-		else:
-			ui.message("Couldn't copy hash to clipboard")

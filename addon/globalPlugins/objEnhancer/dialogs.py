@@ -305,7 +305,7 @@ class InputPanel(wx.Panel):
 			if not newValues:
 				# Translators: An error reported when adding an attribute that is already present.
 				gui.messageBox(
-					_("NO values specified."),
+					_("No values specified."),
 					_("Error"), wx.OK | wx.ICON_ERROR)
 			values[:] = newValues
 
@@ -337,7 +337,7 @@ class AddOutputEntryDialog(wx.Dialog):
 
 		attributeSizer = wx.BoxSizer(wx.HORIZONTAL)
 		# Translators: This is the label for the edit field.
-		attributeText = _("Attribute:")
+		attributeText = _("&Attribute:")
 		attributeLabel = wx.StaticText(self, label=attributeText)
 		attributeSizer.Add(attributeLabel, flag=wx.ALIGN_CENTER_VERTICAL)
 		attributeSizer.AddSpacer(gui.guiHelper.SPACE_BETWEEN_ASSOCIATED_CONTROL_HORIZONTAL)
@@ -519,7 +519,7 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 		if not definition:
 			definition = getattr(obj, "_objEnhancerDefinition", {})
 		if isinstance(definition, configobj.Section):
-			self.title = _("Editing definition (%s)") % definition.name
+			self.title = _("Editing definition ({name})").format(name=definition.name)
 			if obj:
 				assert isinstance(obj, ObjEnhancerOverlay)
 		else:
@@ -532,7 +532,7 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 
 	def makeSettings(self, settingsSizer):
 		settingsSizerHelper = gui.guiHelper.BoxSizerHelper(self, sizer=settingsSizer)
-		nameText = _("Identifying name:")
+		nameText = _("Definition &name:")
 		self.nameEdit = settingsSizerHelper.addLabeledControl(nameText, wx.TextCtrl)
 		if isinstance(self.definition, configobj.Section):
 			self.nameEdit.Value = self.definition.name
@@ -553,7 +553,7 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 		self.outputPanel = OutputPanel(parent=self, definition=self.definition, obj=self.obj)
 		settingsSizerHelper.addItem(self.outputPanel)
 
-		parentText = _("&Inherrit settings from definition")
+		parentText = _("&Inherrit settings from definition:")
 		self.parentChoices = [
 			_("None")
 		]

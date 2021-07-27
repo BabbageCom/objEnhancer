@@ -22,5 +22,5 @@ jobs:
     - name: Upload add-on
       uses: actions/upload-artifact@v1
       with:
-        name: objEnhancer.nvda-addon
-        path: objEnhancer.nvda-addon
+        name: objEnhancer-2021.1.nvda-addon
+        path: objEnhancer-2021.1.nvda-addon

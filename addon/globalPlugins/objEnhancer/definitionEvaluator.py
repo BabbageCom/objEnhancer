@@ -1,6 +1,6 @@
 # Object Enhancer
 
-# Copyright (C) 2017 Babbage B.V.
+# Copyright (C) 2021 Babbage B.V.
 
 # This file is covered by the GNU General Public License.
 # See the file COPYING for more details.
@@ -19,7 +19,7 @@ def evaluateObjectAttributes(obj, definition, cache):
 	if not isinstance(obj, NVDAObject):
 		raise ValueError("Invalid NVDAObject specified: {obj!r}".format(obj=obj))
 	input = definition.get('input', {})
-	if not (isinstance(definition, Section) and input):
+	if not (( isinstance(definition, Section) or isinstance(definition, dict)) and input):
 		raise ValueError("Invalid definition spesification provided: {definition}".format(definition=definition))
 	functions = definition.get('functions', {})
 	for attr, possibleVals in input.items():
@@ -74,7 +74,7 @@ class ObjEnhancerOverlay(NVDAObject):
 def getOverlayClassForDefinition(definition):
 	name = definition.name[0].upper() + definition.name[1:]
 	output = definition.get('output', {})
-	if not (isinstance(definition, Section) and output):
+	if not ( (isinstance(definition, Section) or isinstance(definition, dict)) and output):
 		raise ValueError("Invalid definition specification provided: {definition}".format(definition=definition))
 	output = output.dict()
 	output['_objEnhancerDefinition'] = definition
@@ -96,7 +96,7 @@ def findMatchingDefinitionsForObj(obj, definitions, objCache):
 			try:
 				parentDef = definitions[parent]
 			except KeyError:
-				log.error("Definition {name} refered to unknown parent: {parent}".format(parent=parent))
+				log.error("Definition {name} refered to unknown parent: {parent}".format(name = name, parent=parent))
 				continue
 			if not evaluateObjectAttributes(obj, parentDef, objCache):
 				return None

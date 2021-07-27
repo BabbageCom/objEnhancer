@@ -1,6 +1,6 @@
 # Object Enhancer
 
-# Copyright (C) 2017 Babbage B.V.
+# Copyright (C) 2021 Babbage B.V.
 
 # This file is covered by the GNU General Public License.
 # See the file COPYING for more details.
@@ -91,22 +91,20 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		return definitions
 
 	def chooseNVDAObjectOverlayClasses(self, obj, clsList):
-		try:
-			defs = []
-			appDefs = self.getDefinitionsForAppModule(obj.appModule)
-			globalDefs = self.definitions['global']
-			if appDefs:
-				defs.append(appDefs)
-			if globalDefs:
-				defs.append(globalDefs)
-			objCache = {}
-			for relevantDefs in defs:
-				definition = definitionEvaluator.findMatchingDefinitionsForObj(obj, relevantDefs, objCache)
-				if definition:
-					clsList.insert(0, definitionEvaluator.getOverlayClassForDefinition(definition))
-					break
-		except Exception:
-			log.exception()
+		defs = []
+		appDefs = self.getDefinitionsForAppModule(obj.appModule)
+		globalDefs = self.definitions['global']
+		if appDefs:
+			defs.append(appDefs)
+		if globalDefs:
+			defs.append(globalDefs)
+		objCache = {}
+		for relevantDefs in defs:
+			definition = definitionEvaluator.findMatchingDefinitionsForObj(obj, relevantDefs, objCache)
+			if definition:
+				clsList.insert(0, definitionEvaluator.getOverlayClassForDefinition(definition))
+				break
+
 
 	@script(
 		description=_("Customize the properties of the navigator object"),

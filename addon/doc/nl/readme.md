@@ -13,92 +13,53 @@ Een definitie bevat:
 * Optionele relaties met andere definities. Een definitie kan criteria van andere definities overnemen
 
 ## Je eigen definities aanmaken
-Object Enhancer has a graphical interface to create new and edit existing defintions.
+Object Enhancer heeft een grafische interface om nieuwe definities te maken en bestaande definities te bewerken.
 
-To create a new definition for the current navigator object, press NVDA+control+tab. This will open the new definition dialog when no definition was found for the current object, and edits the existing definition if there is a definition to edit.
+Om een ​​nieuwe definitie voor het huidige navigatorobject te maken, druk je op NVDA + control + tab. Hiermee wordt het nieuwe definitie dialoogvenster geopend als er geen definitie is gevonden voor het huidige object, en wordt de bestaande definitie bewerkt als er een definitie is om te bewerken.
 
-NVDA+control+shift+tab opens the main dialog of the add-on that allows you to look up existing definitions and edit existing ones.
+NVDA+control+shift+tab opent het hoofddialoogvenster van de add-on waarmee je bestaande definities kunt opzoeken en bestaande definities kunt bewerken.
 
-Note that if you want to create a definition quickly, you are strongly advised to create a new definition using NVDA+control+tab, as that allows you to use some of the attributes of the object automatically.
-For example, when you press this shortcut when the current navigator object is a list item, you can automatically add the current name, role or location to the definition.
+Houd er rekening mee dat wanner je snel een definitie wilt maken, je dat het beste kunt doen met NVDA+control+tab, omdat je daarmee bepaalde eigenschappen van het object automatisch kunt laten overnemen.
+Wanneer je bijvoorbeeld op deze sneltoets drukt wanneer het huidige navigatorobject een lijstitem is, kun je automatisch de huidige naam, rol of locatie aan de definitie toevoegen.
 
-### Creating or editing a definition
-The new/edit definition dialog consists of the following items:
+### Een definitie maken of bewerken
+Het dialoogvenster Nieuwe definitie / definitie bewerken bestaat uit de volgende items:
 
-#### Definition name
-An unique name for your definition that is used for you to recognize it later on, as well as to link it to other definition when necessary.
+#### Definitienaam
+Een unieke naam voor je definitie die je gebruikt om deze later te herkennen, en om deze indien nodig aan een andere definitie te koppelen.
 
-#### Filter criteria:
-These are the criteria to use for the definition to apply. You can filter on attributes/properties of an object.
+#### Filtercriteria:
+Dit zijn de criteria die moeten worden gebruikt om de definitie toe te passen. Je kunt filteren op attributen / eigenschappen van een object.
 
-To add a new criterion, press add. You can choose from the list of Relevant object attributes, or prrovide one yourself. For example, you could choose the windowControlID from the list of relevant attributes, which will prepopulate the attribute and value edit controls. Alternatively, if you want to match on an object with IAccessibleRole = 10 (ROLE_SYSTEM_CLIENT), you can do so manually.
+Druk op toevoegen om een ​​nieuw criterium toe te voegen.
+Je kunt kiezen uit de lijst met relevante objectattributen of zelf een attribuut opgeven.
+Je kunt bijvoorbeeld de optie windowControlID kiezen uit de lijst met attributen, waarna de invoervelden voor attribuut en waarde automatisch worden ingevuld.
+Wanneer je bijvoorbeeld wilt matchen op een object met IAccessibleRole = 10 (ROLE_SYSTEM_CLIENT), kun je dit ook handmatig doen.
 
-You can also edit current filter criteria or add an extra value to filter on, if you want to match on an object with a windowControlID of either 15 or 16, for example.
+Je kunt ook de huidige filtercriteria bewerken of een extra waarde toevoegen om op te filteren, wanneer je op een object wilt matchen dat bijv. de waarde 15 of 16 heeft voor windowControlID.
 
-#### Attribute changes
-In the list with attribute changes, you can specify what attributes of the object have to be changed. In most cases, you probably want to change the name or description attributes.
+#### Attribuutwijzigingen
+In de lijst met attribuutwijzigingen kun je opgeven welke kenmerken van het object moeten worden gewijzigd. In de meeste gevallen wil je waarschijnlijk de naam (name) of beschrijving (description) wijzigen.
 
-#### Inherrit settings from definition / Definition is abstract
-This combo box and check box allow you to set a relationship between several definitions.
+#### Instellingen overerven van definitie / Definitie is abstract
+Met deze vervolgkeuezelijst en dit selectievakje kun je een relatie tussen verschillende definities instellen.
 
-Imagine the case where you need to label several buttons in one application. All buttons have a windowClassName of magicButton. You can create a definition that has windowClass=magicButton, and check the check box Definition is abstract, don't use it directly. In subsequent definitions, you can Inherrit settings from the magicButton definition, which will let the new definition behave as were windowClassName=magicButton specified as filter criterion.
+Stel je voor dat je meerdere knoppen in één applicatie moet labelen.
+Alle knoppen hebben een windowClassName van magicButton.
+Je kunt een definitie maken met windowClass = magicButton en het selectievakje Definitie is abstract, gebruik deze niet rechtstreeks aanvinken.
+In volgende definities kun je instellingen overerven uit de definitie van magicButton, waardoor de nieuwe definitie zich zal gedragen alsof windowClassName = magicButton is opgegeven als filtercriterium.
 
-#### Treat object location criteria as absolute screen coordinat
-When this option is enabled, location criteria from the criteria section are parsed like all other properties. This means that, if you define location = (1, 2, 3, 4), every object without this absolute location will fail to match.
+#### Behandel criteria voor objectlocatie als absolute schermcoördinaten
+Wanneer deze optie is ingeschakeld, worden locatiecriteria uit de criteriasectie behandeld zoals alle andere attributen. Dit betekent dat als je locaton = (1, 2, 3, 4) definieert, elk object zonder deze absolute locatie niet overeenkomt.
 
-However, when this option is disabled, it wil have a major effect on object definitions with more than one location property match. The provided location properties, usually the location of the object itself and the location of one of its ancestors or siblings, will be compared, and it will be assumed that the distance between the provided top left corners will be the same across screen resizes. Consider the following definition snippet:
+Als deze optie echter is uitgeschakeld, heeft dit een groot effect op objectdefinities met meer dan één locatie.
+Voor meer details verwijzen we je naar de engelse documentatie.
 
-```
-[example1]
-	[[input]]
-		location = [(248, 611, 869, 82)]
-		parent.parent.location = [(245, 399, 875, 297)]
-```
+#### Definitiefoutafhandeling
+Met deze vervolgkeuzelijst kun je beslissen wat er moet gebeuren als er een fout optreedt bij het evalueren van deze definitie:
 
-This input definition is based on the unmaximized state of an application. As soon as the application is maximized, the definition should be different, so the definition won't match to the object anymore:
+* Indien ingesteld op continue, wordt de fout genegeerd en gaat de evaluatie verder
+* Indien ingesteld op break, wordt de evaluatie afgebroken
+* Indien ingesteld op raise, veroorzaakt een falende evaluatie een traceback.
 
-```
-[example2]
-	[[input]]
-		location = [(11, 582, 1344, 101)]
-		parent.parent.location = [(8, 370, 1350, 316)]
-```
-
-When the absolute locations option is disabled, the first definition above will still match in the case that the object properties are equal to the second definition, allowing the second definition to be omited. The following logic is used:
-
-* When an object gains focus or becomes navigator object, the definitions are evaluated.
-* When location properties are defined, the difference between the defined locations and actual locations are calculated
-* When multiple locations are defined, such as "location" and 'parent.parent.location", the logic assumes that the top left coordinate differences for the provided location rectangles are all the same
-
-So, this sounds overwhelmingly complicated. Let's use the examples provided above to make things clearer.
-
-* Example 1:
-	+ defined location = (248, 611, 869, 82)
-	+ actual location = (248, 611, 869, 82)
-	+ Top left coordinate differences for location: (248-248=0,611-611=0)
-	+ defined parent.parent.location = (245, 399, 875, 297)
-	+ actual parent.parent.location = (245, 399, 875, 297)
-	+ Top left coordinate differences for parent.parent.location: (245-245=0,399-399=0)
-	+ Top left coordinate differences for location and parent.parent.location are equal. No wonder, this is an absolute match
-* Example 2:
-	+ defined 		location = (248, 611, 869, 82)
-	+ actual location = (11, 582, 1344, 101)
-	+ Top left coordinate differences for location: (248-11=237,611-582=29)
-	+ defined parent.parent.location = (245, 399, 875, 297)
-	+ actual parent.parent.location = (8, 370, 1350, 316)
-	+ Top left coordinate differences for location: (245-8=237,399-370=29)
-	+ Top left coordinate differences for location and parent.parent.location are equal
-
-If you still don't get it, please consult the source code of this add-on. Please note that disabling this option can create false positives if not used correctly. You should always give preference to other unique object properties if there are any. This logic is just their for objects for which location based matching is the only way to go.
-
-#### Definition error handling
-This combo box allows you to decide what to do if there is an error while evaluating this definition:
-
-* If set to continue, the error is ignored and evaluation continues
-* If set to break, evaluation is aborted
-* If set to raise, an error, a failing evaluation causes a traceback.
-
-Please don't touch this option unless you're a developer.
-
-## Technical details
-Object definition files are parsed using the configobj module in unrepr mode.
+Pas deze optie niet aan tenzij je weet wat je doet, bijv. omdat je een NVDA- of Python-ontwikkelaar bent.

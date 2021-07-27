@@ -361,11 +361,14 @@ class AddOutputEntryDialog(wx.Dialog):
 class OutputPanel(wx.Panel):
 
 	def __init__(self, parent, definition, obj=None):
-		if not isinstance(definition, dict):
+		if not ( isinstance(definition, configobj.Section) or isinstance(definition, dict) ):
 			raise ValueError("Invalid definition provided: {definition}").format(definition=definition)
 		self.output = list(definition['output'].items())
 		super(OutputPanel, self).__init__(parent, id=wx.ID_ANY)
+
 		sizer = gui.guiHelper.BoxSizerHelper(self, orientation=wx.HORIZONTAL)
+
+
 		# Translators: The label for output list.
 		outputText = _("&Attribute changes:")
 		self.outputList = sizer.addLabeledControl(
@@ -384,30 +387,23 @@ class OutputPanel(wx.Panel):
 
 		# Translators: The label for the group of controls to change an item.
 		changeItemText = _("Change output value")
-		changeItemHelper = sizer.addItem(
-			gui.guiHelper.BoxSizerHelper(
-				self,
-				sizer=wx.StaticBoxSizer(wx.StaticBox(self, label=changeItemText), wx.VERTICAL)
-				))
-		attributeSizer = wx.BoxSizer(wx.HORIZONTAL)
+
+		outputGroupSizer = wx.StaticBoxSizer(wx.VERTICAL, self, label=changeItemText)
+		outputBox = outputGroupSizer.GetStaticBox()
+		outputGroup = gui.guiHelper.BoxSizerHelper(self, sizer=outputGroupSizer)
+		sizer.addItem(outputGroup)
+
 		# Translators: The label for the edit field to change the attribute of an item.
 		attributeText = _("Output &attribute:")
-		attributeLabel = wx.StaticText(self, label=attributeText)
-		attributeSizer.Add(attributeLabel, flag=wx.ALIGN_CENTER_VERTICAL)
-		attributeSizer.AddSpacer(gui.guiHelper.SPACE_BETWEEN_ASSOCIATED_CONTROL_HORIZONTAL)
-		self.attributeCombo = wx.ComboBox(
-			self,
-			choices=constants.OUTPUT_ATTRIBUTES,
-			style=wx.CB_DROPDOWN
-		)
-		attributeSizer.Add(self.attributeCombo)
-		changeItemHelper.addItem(attributeSizer)
+		self.attributeCombo = outputGroup.addLabeledControl(attributeText, wx.Choice, choices = constants.OUTPUT_ATTRIBUTES)
+
+
 
 		self.attributeCombo.Bind(wx.EVT_TEXT, skipEventAndCall(self.onItemEdited))
 
 		# Translators: The label for the edit field to change the value of a criterium.
 		valueText = _("Output &value:")
-		self.valueEdit = changeItemHelper.addLabeledControl(valueText, wx.TextCtrl)
+		self.valueEdit = outputGroup.addLabeledControl(valueText, wx.TextCtrl)
 		self.valueEdit.Bind(wx.EVT_TEXT, skipEventAndCall(self.onItemEdited))
 
 		# disable controls until an item is selected
@@ -434,18 +430,20 @@ class OutputPanel(wx.Panel):
 
 	def onItemEdited(self):
 		if self.editingItem is not None:
+			log.debug("onItemEdited")
 			# Update the entry the user was just editing.
-			attribute = self.attributeCombo.Value
+			attribute = constants.OUTPUT_ATTRIBUTES[ self.attributeCombo.GetCurrentSelection() ]
 			val = self.valueEdit.Value
 			self.output[self.editingItem] = (attribute, val)
 
 	def onListItemFocused(self, evt):
+		log.debug("onListItemFocused")
 		# Update the editing controls to reflect the newly selected criterium.
 		index = evt.Index
 		self.editingItem = index
 		entry = self.output[index]
 		attr, val = entry
-		self.attributeCombo.ChangeValue(attr)
+		self.attributeCombo.SetSelection( constants.OUTPUT_ATTRIBUTES.index(attr) )
 		self.valueEdit.ChangeValue(val)
 		self.removeButton.Enable()
 		self.attributeCombo.Enable()

@@ -16,6 +16,7 @@ import NVDAObjects
 from copy import copy
 from logHandler import log
 from ast import literal_eval
+import api
 from . import utils
 addonHandler.initTranslation()
 
@@ -428,6 +429,7 @@ class OutputPanel(wx.Panel):
 		entry = self.output[item]
 		return entry[column]
 
+
 	def onItemEdited(self):
 		if self.editingItem is not None:
 			log.debug("onItemEdited")
@@ -508,6 +510,7 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 			moduleDefinitions,
 			definition=None,
 			obj=None,
+			fgObj = None,
 			objectVars=None,
 			multiInstanceAllowed=False):
 		if definition is None and obj is None:
@@ -527,6 +530,7 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 		self.objectVars = objectVars
 		self.moduleDefinitions = moduleDefinitions
 		super(SingleDefinitionDialog, self).__init__(parent, multiInstanceAllowed=multiInstanceAllowed)
+		self.fgObj = fgObj
 
 	def makeSettings(self, settingsSizer):
 		settingsSizerHelper = gui.guiHelper.BoxSizerHelper(self, sizer=settingsSizer)
@@ -568,6 +572,14 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 			wx.EVT_CHOICE,
 			skipEventAndCall(self.onParentListChange)
 		)
+
+		isFgDepedentText = _("&Make depending on current foreground")
+		self.isFgDepedentCheckBox = settingsSizerHelper.addItem(wx.CheckBox(self, label=isFgDepedentText))
+		self.isFgDepedentCheckBox.Value = self.definition.get('isFG', False) # TODO
+
+		useRelativeLocationText = _("&Use relative location to current foreground Object")
+		self.useRelativeLocationCheckBox = settingsSizerHelper.addItem(wx.CheckBox(self, label=useRelativeLocationText))
+		self.useRelativeLocationCheckBox.Value = self.definition.get('isFGRel', False) # TODO
 
 		isAbstractText = _("&Definition is abstract, don't use it directly")
 		self.isAbstractCheckBox = settingsSizerHelper.addItem(wx.CheckBox(self, label=isAbstractText))
@@ -626,7 +638,7 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 			)
 			self.nameEdit.SetFocus()
 			return
-		if not self.inputPanel.input:
+		if not self.inputPanel.input and not self.useRelativeLocationCheckBox.IsChecked(): #TODO make more nice
 			# Translators: An error reported when adding a definition without a input.
 			gui.messageBox(
 				_("You must add valid input criteria"),
@@ -635,8 +647,31 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 			self.inputPanel.SetFocus()
 			return
 		try:
+
+			if self.isFgDepedentCheckBox.IsChecked():
+				fgname = 'fg_' + name
+				if self.moduleDefinitions.get(fgname):
+					log.info("fg definition already exists!")
+				else:
+					fgDef = {}
+					fgDef["input"] = {'role': [self.fgObj.role,], 'name': [self.fgObj.name,]}
+					fgDef["output"] = {}
+					fgDef["functions"] = {}
+
+					self.moduleDefinitions[fgname] = fgDef
+					log.info("fg is added!")
+
+				self.definition['fg'] = fgname
+
+
+
 			parent = self.moduleDefinitions
 			self.definition["input"] = dict(self.inputPanel.input)
+			if self.useRelativeLocationCheckBox.IsChecked():
+				self.definition["input"]['location'] = [(self.obj.location.left - self.fgObj.location.left,
+												   self.obj.location.top, - self.fgObj.location.top,
+												   self.obj.location.height,
+												   self.obj.location.width)]
 			self.definition["functions"] = dict(self.inputPanel.functions)
 			self.definition["output"] = dict(self.outputPanel.output)
 			if isinstance(self.definition, configobj.Section):

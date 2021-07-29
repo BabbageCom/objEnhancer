@@ -13,7 +13,7 @@ from locationHelper import RectLTWH
 from . import utils
 from types import MethodType
 from configobj import Section
-
+import api
 
 def evaluateObjectAttributes(obj, definition, cache):
 	if not isinstance(obj, NVDAObject):
@@ -22,15 +22,19 @@ def evaluateObjectAttributes(obj, definition, cache):
 	if not (( isinstance(definition, Section) or isinstance(definition, dict)) and input):
 		raise ValueError("Invalid definition spesification provided: {definition}".format(definition=definition))
 	functions = definition.get('functions', {})
+
 	for attr, possibleVals in input.items():
+
 		params = functions.get(attr, {})
 		tupleParams = tuple(params.items())
 		val = cache.get((attr, tupleParams))
+		log.info(f"val from cache: {val} \n {params} {tupleParams} \n{cache}")
 		if not val:
 			try:
 				# Use attrgetter to support fetching attributes on children
 				try:
 					val = attrgetter(attr)(obj)
+					log.info(f"val from attrgetter: {val}")
 				except AttributeError:
 					func = vars(utils).get(attr)
 					if not callable(func):
@@ -51,18 +55,31 @@ def evaluateObjectAttributes(obj, definition, cache):
 					elif handleErrors == "continue":
 						continue
 			cache[(attr, tupleParams)] = val
+
+		log.info(f"{attr}, \n {possibleVals}\n {val}")
 		if val in possibleVals:
 			continue
-		elif not definition.get('absoluteLocations', True) and attr == 'location':
-			for expectedVal in possibleVals:
-				relativeLocation = RectLTWH(*map(sub, expectedVal, val))
-				if relativeLocation.topLeft == relativeLocation.bottomRight:
-					break
-			else:
-				break
+
+		elif attr == 'location':
+			# in this case we check for the relative location compared to the foreground object
+			fgLocation = api.getForegroundObject().location
+			objLocation = attrgetter('location')(obj)
+			relativeLocation = (objLocation.left - fgLocation.left, objLocation.top - fgLocation.top, objLocation.height, objLocation.width)
+			if relativeLocation in possibleVals:
+				continue
+
+		# elif not definition.get('absoluteLocations', True) and attr == 'location':
+		# 	for expectedVal in possibleVals:
+		# 		relativeLocation = RectLTWH(*map(sub, expectedVal, val))
+		# 		if relativeLocation.topLeft == relativeLocation.bottomRight:
+		# 			break
+		# 	else:
+		# 		break
 		else:
+			log.info(f"val not in possibleVals!")
 			break
 	else:
+		# if we did not encounter a break statement in the previous for loop we get here
 		return True
 	return False
 
@@ -74,6 +91,9 @@ class ObjEnhancerOverlay(NVDAObject):
 def getOverlayClassForDefinition(definition):
 	name = definition.name[0].upper() + definition.name[1:]
 	output = definition.get('output', {})
+	if not output:
+		# this appears to be a empty definition helper (like fg dependencies) so we ignore this
+		return None
 	if not ( (isinstance(definition, Section) or isinstance(definition, dict)) and output):
 		raise ValueError("Invalid definition specification provided: {definition}".format(definition=definition))
 	output = output.dict()
@@ -89,8 +109,12 @@ def findMatchingDefinitionsForObj(obj, definitions, objCache):
 	if not isinstance(definitions, configobj.ConfigObj):
 		raise ValueError("Invalid spesification provided: {definitions}".format(definitions=definitions))
 	for name, definition in definitions.items():
+		log.info(f"\n\n\n\n {name}\n{definition}")
 		if definition['isAbstract']:
 			continue
+
+		# parent in this context means the parent of the definition (from which the definition inherits filter criteria
+		# so this is not related to the parent of the object
 		parent = definition["parent"]
 		if parent:
 			try:
@@ -100,7 +124,28 @@ def findMatchingDefinitionsForObj(obj, definitions, objCache):
 				continue
 			if not evaluateObjectAttributes(obj, parentDef, objCache):
 				return None
-		if evaluateObjectAttributes(obj, definition, objCache):
+
+		# this part checks whether there is a filter that depends on the current foreground object and applies that filter
+		fg = definition["fg"]
+		if fg:
+			log.info("fg filter found!")
+			fgObj = api.getForegroundObject()
+			try:
+				fgDef = definitions[fg]
+			except KeyError:
+				log.error("Definition {name} refered to unknown foreground: {fg}".format(name=name, fg=fg))
+				continue
+			log.info(f"fg: \n {fgObj.role}\t {attrgetter('role')(fgObj)} \n {fgObj.name} \n{fgDef}")
+
+
+
+			if not evaluateObjectAttributes(fgObj, fgDef, {}):
+
+				# if the foreground object does not match with the demanded fg object, we deny this definition
+				return None
+			log.info("fg matches!")
+
+		if evaluateObjectAttributes(obj, definition, {}):
 			return definition
 	return None
 

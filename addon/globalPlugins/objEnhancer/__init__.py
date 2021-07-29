@@ -93,6 +93,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def chooseNVDAObjectOverlayClasses(self, obj, clsList):
 		defs = []
 		appDefs = self.getDefinitionsForAppModule(obj.appModule)
+		fg = api.getForegroundObject()
+		log.info(f"current fg: \n {fg.role} \n {fg.name}")
 		globalDefs = self.definitions['global']
 		if appDefs:
 			defs.append(appDefs)
@@ -102,8 +104,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		for relevantDefs in defs:
 			definition = definitionEvaluator.findMatchingDefinitionsForObj(obj, relevantDefs, objCache)
 			if definition:
-				clsList.insert(0, definitionEvaluator.getOverlayClassForDefinition(definition))
-				break
+				overlayClass = definitionEvaluator.getOverlayClassForDefinition(definition)
+				if overlayClass:
+					clsList.insert(0, overlayClass)
+					break
 
 
 	@script(
@@ -112,6 +116,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		)
 	def script_navigatorObject_enhance(self, gesture):
 		obj = api.getNavigatorObject()
+		fgObj = api.getForegroundObject() # needed for the case when we want to make definition fg dependent
 		if not isinstance(obj, NVDAObject):
 			# Translators: Reported when the user tries to perform a command related to the navigator object
 			# but there is no current navigator object.
@@ -122,6 +127,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			gui.mainFrame._popupSettingsDialog,
 			dialogs.SingleDefinitionDialog,
 			obj=obj,
+			fgObj = fgObj,
 			objectVars=objectVars,
 			moduleDefinitions=self.getDefinitionsForAppModule(obj.appModule, create=True)
 		)

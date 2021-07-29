@@ -16,6 +16,7 @@ from configobj.validate import Validator, ValidateError
 defFileSpec = ConfigObj(StringIO(
 	u"""[__many__]
 	parent = string(default="")
+	fg = string(default="")
 	isAbstract = boolean(default=False)
 	absoluteLocations = boolean(default=True)
 	handleDefinitionErrors = option("continue", "break", "raise", default="break")

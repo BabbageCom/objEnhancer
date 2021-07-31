@@ -78,7 +78,7 @@ def validateDefinitionObj(obj):
 		section_string = u', '.join(section_list)
 		if error is False:
 			error = u'Missing value or section.'
-		errors.append(section_string + ' = ' + error.message)
+		errors.append(section_string + ' = ' + str(error))
 	if errors:
 		errors = u"; ".join(errors)
 		raise ValidateError("Errors in {obj}: {errors}".format(obj=obj, errors=errors))

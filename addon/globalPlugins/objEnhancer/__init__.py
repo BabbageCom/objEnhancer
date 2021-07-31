@@ -94,7 +94,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		defs = []
 		appDefs = self.getDefinitionsForAppModule(obj.appModule)
 		fg = api.getForegroundObject()
-		log.info(f"current fg: \n {fg.role} \n {fg.name}")
 		globalDefs = self.definitions['global']
 		if appDefs:
 			defs.append(appDefs)
@@ -106,6 +105,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			if definition:
 				overlayClass = definitionEvaluator.getOverlayClassForDefinition(definition)
 				if overlayClass:
+					log.info("objEnhancer overlayed a class!")
 					clsList.insert(0, overlayClass)
 					break
 
@@ -131,6 +131,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			objectVars=objectVars,
 			moduleDefinitions=self.getDefinitionsForAppModule(obj.appModule, create=True)
 		)
+
 
 	def openDefinitionsDialog(self, evt=None):
 		if evt:

@@ -24,17 +24,18 @@ def evaluateObjectAttributes(obj, definition, cache):
 	functions = definition.get('functions', {})
 
 	for attr, possibleVals in input.items():
-
+		if attr == 'fg':
+			#this is a dummy attribute that is added to give an overview when looking at the definition.
+			continue
 		params = functions.get(attr, {})
 		tupleParams = tuple(params.items())
 		val = cache.get((attr, tupleParams))
-		log.info(f"val from cache: {val} \n {params} {tupleParams} \n{cache}")
 		if not val:
 			try:
 				# Use attrgetter to support fetching attributes on children
 				try:
 					val = attrgetter(attr)(obj)
-					log.info(f"val from attrgetter: {val}")
+
 				except AttributeError:
 					func = vars(utils).get(attr)
 					if not callable(func):
@@ -56,27 +57,28 @@ def evaluateObjectAttributes(obj, definition, cache):
 						continue
 			cache[(attr, tupleParams)] = val
 
-		log.info(f"{attr}, \n {possibleVals}\n {val}")
 		if val in possibleVals:
 			continue
 
-		elif attr == 'location':
+		elif attr == 'location' and definition.get("fgDependendLocation", False):
 			# in this case we check for the relative location compared to the foreground object
 			fgLocation = api.getForegroundObject().location
-			objLocation = attrgetter('location')(obj)
+			objLocation = obj.location
 			relativeLocation = (objLocation.left - fgLocation.left, objLocation.top - fgLocation.top, objLocation.height, objLocation.width)
 			if relativeLocation in possibleVals:
+				log.info("good enough!")
 				continue
+			else:
+				break
 
-		# elif not definition.get('absoluteLocations', True) and attr == 'location':
-		# 	for expectedVal in possibleVals:
-		# 		relativeLocation = RectLTWH(*map(sub, expectedVal, val))
-		# 		if relativeLocation.topLeft == relativeLocation.bottomRight:
-		# 			break
-		# 	else:
-		# 		break
+		elif not definition.get('absoluteLocations', True) and attr == 'location':
+			for expectedVal in possibleVals:
+				relativeLocation = RectLTWH(*map(sub, expectedVal, val))
+				if relativeLocation.topLeft == relativeLocation.bottomRight:
+					break
+			else:
+				break
 		else:
-			log.info(f"val not in possibleVals!")
 			break
 	else:
 		# if we did not encounter a break statement in the previous for loop we get here
@@ -109,7 +111,6 @@ def findMatchingDefinitionsForObj(obj, definitions, objCache):
 	if not isinstance(definitions, configobj.ConfigObj):
 		raise ValueError("Invalid spesification provided: {definitions}".format(definitions=definitions))
 	for name, definition in definitions.items():
-		log.info(f"\n\n\n\n {name}\n{definition}")
 		if definition['isAbstract']:
 			continue
 
@@ -128,23 +129,20 @@ def findMatchingDefinitionsForObj(obj, definitions, objCache):
 		# this part checks whether there is a filter that depends on the current foreground object and applies that filter
 		fg = definition["fg"]
 		if fg:
-			log.info("fg filter found!")
 			fgObj = api.getForegroundObject()
+			if not fgObj:
+				return None
 			try:
 				fgDef = definitions[fg]
 			except KeyError:
 				log.error("Definition {name} refered to unknown foreground: {fg}".format(name=name, fg=fg))
 				continue
-			log.info(f"fg: \n {fgObj.role}\t {attrgetter('role')(fgObj)} \n {fgObj.name} \n{fgDef}")
-
-
 
 			if not evaluateObjectAttributes(fgObj, fgDef, {}):
-
 				# if the foreground object does not match with the demanded fg object, we deny this definition
 				return None
-			log.info("fg matches!")
 
+		# if the optional parent definition and fg definition checks out, we check the object definition
 		if evaluateObjectAttributes(obj, definition, {}):
 			return definition
 	return None

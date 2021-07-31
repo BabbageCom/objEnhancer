@@ -214,6 +214,10 @@ class InputPanel(wx.Panel):
 
 		self.editingItem = None
 
+		specialGroupSizer = wx.StaticBoxSizer(wx.VERTICAL, self, label="Special inputs")
+		outputGroup = gui.guiHelper.BoxSizerHelper(self, sizer=specialGroupSizer)
+		sizer.addItem(outputGroup)
+
 		bHelper = sizer.addItem(gui.guiHelper.ButtonHelper(orientation=wx.HORIZONTAL))
 		# Translators: The label for a button to add a new entry.
 		self.addButton = bHelper.addButton(self, label=_("&Add"))
@@ -227,6 +231,24 @@ class InputPanel(wx.Panel):
 		self.addButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.onAddClick))
 		self.editButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.onEditClick))
 		self.removeButton.Bind(wx.EVT_BUTTON, skipEventAndCall(self.onRemoveClick))
+
+		absoluteLocationsText = _("&Treat object location criteria as absolute screen coordinates")
+		self.absoluteLocationsCheckBox = outputGroup.addItem(wx.CheckBox(self, label=absoluteLocationsText))
+		self.absoluteLocationsCheckBox.Value = self.definition.get('absoluteLocations', False)
+		self.absoluteLocationsCheckBox.Bind(
+			wx.EVT_CHECKBOX,
+			parent.onAbsoluteLocationsCheckbox
+		)
+
+		isFgDepedentText = _("&Make depending on current foreground")
+		self.isFgDepedentCheckBox = outputGroup.addItem(wx.CheckBox(self, label=isFgDepedentText))
+		self.isFgDepedentCheckBox.Value = bool(self.definition.get('fg', None))  # TODO
+
+
+
+		useRelativeLocationText = _("&Use relative location to current foreground Object")
+		self.useRelativeLocationCheckBox = outputGroup.addItem(wx.CheckBox(self, label=useRelativeLocationText))
+		self.useRelativeLocationCheckBox.Value = self.definition.get('fgDependendLocation', False)
 
 		self.SetSizerAndFit(sizer.sizer)
 
@@ -573,13 +595,10 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 			skipEventAndCall(self.onParentListChange)
 		)
 
-		isFgDepedentText = _("&Make depending on current foreground")
-		self.isFgDepedentCheckBox = settingsSizerHelper.addItem(wx.CheckBox(self, label=isFgDepedentText))
-		self.isFgDepedentCheckBox.Value = self.definition.get('isFG', False) # TODO
+		# isFgDepedentText = _("&Make depending on current foreground")
+		# self.isFgDepedentCheckBox = settingsSizerHelper.addItem(wx.CheckBox(self, label=isFgDepedentText))
+		# self.isFgDepedentCheckBox.Value =bool( self.definition.get('fg', None) )  # TODO
 
-		useRelativeLocationText = _("&Use relative location to current foreground Object")
-		self.useRelativeLocationCheckBox = settingsSizerHelper.addItem(wx.CheckBox(self, label=useRelativeLocationText))
-		self.useRelativeLocationCheckBox.Value = self.definition.get('isFGRel', False) # TODO
 
 		isAbstractText = _("&Definition is abstract, don't use it directly")
 		self.isAbstractCheckBox = settingsSizerHelper.addItem(wx.CheckBox(self, label=isAbstractText))
@@ -589,13 +608,6 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 			self.onIsAbstractCheckbox
 		)
 
-		absoluteLocationsText = _("&Treat object location criteria as absolute screen coordinates")
-		self.absoluteLocationsCheckBox = settingsSizerHelper.addItem(wx.CheckBox(self, label=absoluteLocationsText))
-		self.absoluteLocationsCheckBox.Value = self.definition.get('absoluteLocations', True)
-		self.absoluteLocationsCheckBox.Bind(
-			wx.EVT_CHECKBOX,
-			self.onAbsoluteLocationsCheckbox
-		)
 
 		handleDefinitionErrorsText = _("&Definition error handling:")
 		self.handleDefinitionErrorsChoices = ("continue", "break", "raise")
@@ -638,7 +650,10 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 			)
 			self.nameEdit.SetFocus()
 			return
-		if not self.inputPanel.input and not self.useRelativeLocationCheckBox.IsChecked(): #TODO make more nice
+		if not self.inputPanel.input and not self.inputPanel.useRelativeLocationCheckBox.IsChecked():
+			# if the relative Location with the fg is used then we still can have an empty input but that will be filled
+			# down the line
+
 			# Translators: An error reported when adding a definition without a input.
 			gui.messageBox(
 				_("You must add valid input criteria"),
@@ -646,12 +661,14 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 			)
 			self.inputPanel.SetFocus()
 			return
-		try:
 
-			if self.isFgDepedentCheckBox.IsChecked():
+		try:
+			fgname = None
+			if self.inputPanel.isFgDepedentCheckBox.IsChecked() and self.fgObj:
+				# first we check whether we want fg dependencies
 				fgname = 'fg_' + name
 				if self.moduleDefinitions.get(fgname):
-					log.info("fg definition already exists!")
+					log.debug("fg definition already exists!")
 				else:
 					fgDef = {}
 					fgDef["input"] = {'role': [self.fgObj.role,], 'name': [self.fgObj.name,]}
@@ -659,21 +676,33 @@ class SingleDefinitionDialog(gui.SettingsDialog):
 					fgDef["functions"] = {}
 
 					self.moduleDefinitions[fgname] = fgDef
-					log.info("fg is added!")
+					log.debug("fg is added!")
 
 				self.definition['fg'] = fgname
 
 
 
+			# here we build up de definition with the inputs/outputs
 			parent = self.moduleDefinitions
 			self.definition["input"] = dict(self.inputPanel.input)
-			if self.useRelativeLocationCheckBox.IsChecked():
+			if self.definition.get('fg'):
+				# if we have a foreground dependency we also add it to the input dict for overview when looking up
+				# this defition
+				self.definition["input"]['fg'] = [self.definition.get('fg'),]
+
+
+			#in the special case that we checked the use of relative location we get that here
+			if self.inputPanel.useRelativeLocationCheckBox.IsChecked() and self.fgObj:
+
 				self.definition["input"]['location'] = [(self.obj.location.left - self.fgObj.location.left,
-												   self.obj.location.top, - self.fgObj.location.top,
+												   self.obj.location.top - self.fgObj.location.top,
 												   self.obj.location.height,
 												   self.obj.location.width)]
+				self.definition['fgDependendLocation'] = True
+
 			self.definition["functions"] = dict(self.inputPanel.functions)
 			self.definition["output"] = dict(self.outputPanel.output)
+
 			if isinstance(self.definition, configobj.Section):
 				assert parent is self.definition.parent
 				# This is an existing definition
